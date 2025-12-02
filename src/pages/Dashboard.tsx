@@ -72,7 +72,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
-  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all" });
+  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all" });
   const [searchQuery, setSearchQuery] = useState("");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -92,6 +92,15 @@ const Dashboard = () => {
     return [...tags].sort();
   }, [opportunities]);
 
+  // Get unique countries for filter
+  const allCountries = useMemo(() => {
+    const countries = new Set<string>();
+    opportunities.forEach(o => {
+      if (o.location) countries.add(o.location.toLowerCase());
+    });
+    return [...countries].sort();
+  }, [opportunities]);
+
   // Filter opportunities
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(o => {
@@ -99,6 +108,7 @@ const Dashboard = () => {
       if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
       if (filters.company !== "all" && o.company_name !== filters.company) return false;
       if (filters.tag !== "all" && (!o.tags || !o.tags.includes(filters.tag))) return false;
+      if (filters.country !== "all" && o.location?.toLowerCase() !== filters.country) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -455,6 +465,7 @@ const Dashboard = () => {
             <PipelineFilters 
               companies={companyNames}
               tags={allTags}
+              countries={allCountries}
               filters={filters}
               onFiltersChange={setFilters}
             />
