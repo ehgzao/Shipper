@@ -8,8 +8,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Sparkles, Copy } from "lucide-react";
+import { Trash2, Sparkles, Copy, X, Plus, Tag } from "lucide-react";
 import { AICoach } from "@/components/AICoach";
+import { Badge } from "@/components/ui/badge";
+
+const COMMON_TAGS = [
+  "Product Manager",
+  "Senior PM",
+  "Lead PM",
+  "Growth PM",
+  "Technical PM",
+  "Data PM",
+  "Platform PM",
+  "UX PM",
+  "B2B",
+  "B2C",
+  "Fintech",
+  "SaaS",
+  "E-commerce",
+  "AI/ML",
+  "Prioridade Alta",
+  "Follow-up",
+];
 import type { Database } from "@/integrations/supabase/types";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
@@ -36,6 +56,7 @@ export interface Opportunity {
   created_at: string | null;
   updated_at: string | null;
   applied_at: string | null;
+  tags: string[] | null;
 }
 
 export interface OpportunityProfile {
@@ -114,6 +135,20 @@ export const OpportunityModal = ({
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
+
+  const addTag = (tag: string) => {
+    const trimmedTag = tag.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+    }
+    setNewTag("");
+  };
+
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag));
+  };
 
   // Reset form when opportunity changes
   useEffect(() => {
@@ -131,6 +166,7 @@ export const OpportunityModal = ({
       setNextAction(opportunity.next_action || "");
       setNextActionDate(opportunity.next_action_date || "");
       setNotes(opportunity.notes || "");
+      setTags(opportunity.tags || []);
     } else {
       // Reset for new opportunity
       setCompanyName("");
@@ -146,6 +182,7 @@ export const OpportunityModal = ({
       setNextAction("");
       setNextActionDate("");
       setNotes("");
+      setTags([]);
     }
   }, [opportunity, open]);
 
@@ -177,6 +214,7 @@ export const OpportunityModal = ({
       next_action: nextAction.trim() || null,
       next_action_date: nextActionDate || null,
       notes: notes.trim() || null,
+      tags: tags.length > 0 ? tags : [],
       user_id: userId,
     };
 
@@ -260,6 +298,7 @@ export const OpportunityModal = ({
         contact_name: opportunity.contact_name,
         contact_linkedin: opportunity.contact_linkedin,
         notes: opportunity.notes,
+        tags: opportunity.tags,
       });
 
     if (error) {
@@ -463,6 +502,63 @@ export const OpportunityModal = ({
               placeholder="Anotações sobre a oportunidade..."
               rows={3}
             />
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5" />
+              Tags
+            </Label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="gap-1">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Adicionar tag..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTag(newTag);
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => addTag(newTag)}
+                disabled={!newTag.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {COMMON_TAGS.filter(t => !tags.includes(t)).slice(0, 8).map((tag) => (
+                <Badge 
+                  key={tag} 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs"
+                  onClick={() => addTag(tag)}
+                >
+                  + {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">

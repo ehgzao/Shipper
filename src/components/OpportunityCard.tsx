@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, Calendar, ExternalLink, GripVertical } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, GripVertical, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Opportunity } from "./OpportunityModal";
 
@@ -124,6 +124,17 @@ export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) 
             {opportunity.work_model && (
               <Badge variant="outline" className="text-xs">
                 {WORK_MODEL_LABELS[opportunity.work_model] || opportunity.work_model}
+              </Badge>
+            )}
+            {opportunity.tags && opportunity.tags.slice(0, 2).map((tag) => (
+              <Badge key={tag} variant="default" className="text-xs bg-primary/20 text-primary hover:bg-primary/30">
+                <Tag className="h-2.5 w-2.5 mr-0.5" />
+                {tag}
+              </Badge>
+            ))}
+            {opportunity.tags && opportunity.tags.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{opportunity.tags.length - 2}
               </Badge>
             )}
           </div>

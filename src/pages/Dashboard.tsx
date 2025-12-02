@@ -84,7 +84,8 @@ const Dashboard = () => {
         const matchesSearch = 
           o.company_name.toLowerCase().includes(query) ||
           o.role_title.toLowerCase().includes(query) ||
-          o.location?.toLowerCase().includes(query);
+          o.location?.toLowerCase().includes(query) ||
+          o.tags?.some(tag => tag.toLowerCase().includes(query));
         if (!matchesSearch) return false;
       }
       return true;
