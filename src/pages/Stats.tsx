@@ -169,9 +169,15 @@ const Stats = () => {
   const summaryStats = useMemo(() => {
     const total = filteredOpportunities.length;
     const applied = filteredOpportunities.filter(o => o.status !== "researching").length;
-    const interviewing = filteredOpportunities.filter(o => o.status === "interviewing").length;
+    const interviewing = filteredOpportunities.filter(o => o.status === "interviewing" || o.status === "offer").length;
     const offers = filteredOpportunities.filter(o => o.status === "offer").length;
-    return { total, applied, interviewing, offers };
+    const interviewingOnly = filteredOpportunities.filter(o => o.status === "interviewing").length;
+    
+    // Conversion rates
+    const applicationToInterviewRate = applied > 0 ? Math.round((interviewing / applied) * 100) : 0;
+    const interviewToOfferRate = (interviewingOnly + offers) > 0 ? Math.round((offers / (interviewingOnly + offers)) * 100) : 0;
+    
+    return { total, applied, interviewing: interviewingOnly, offers, applicationToInterviewRate, interviewToOfferRate };
   }, [filteredOpportunities]);
 
   // Tag statistics
@@ -345,6 +351,62 @@ const Stats = () => {
                       <p className="text-2xl font-bold">{summaryStats.offers}</p>
                       <p className="text-xs text-muted-foreground">Ofertas</p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Conversion Rates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Aplicação → Entrevista</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {summaryStats.interviewing + summaryStats.offers} de {summaryStats.applied} aplicações
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-blue-500">{summaryStats.applicationToInterviewRate}%</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      style={{ width: `${summaryStats.applicationToInterviewRate}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Entrevista → Oferta</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {summaryStats.offers} de {summaryStats.interviewing + summaryStats.offers} entrevistas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-green-500">{summaryStats.interviewToOfferRate}%</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all duration-500"
+                      style={{ width: `${summaryStats.interviewToOfferRate}%` }}
+                    />
                   </div>
                 </CardContent>
               </Card>
