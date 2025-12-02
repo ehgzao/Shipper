@@ -2,9 +2,13 @@
 
 /* Status colors as CSS variables */
 :root {
+  --status-researching: 220 9% 46%;
   --status-applied: 217 91% 60%;
   --status-interviewing: 271 91% 65%;
   --status-offer: 142 71% 45%;
+  --status-rejected: 0 72% 51%;
+  --status-ghosted: 33 92% 50%;
+  --status-withdrawn: 220 9% 64%;
 }
 @tailwind components;
 @tailwind utilities;
