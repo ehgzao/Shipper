@@ -150,6 +150,16 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
     }
   };
 
+  const toggleAllCompaniesInCountry = (companyIds: string[]) => {
+    const allSelected = companyIds.every(id => selectedCompanyIds.includes(id));
+    if (allSelected) {
+      setSelectedCompanyIds(selectedCompanyIds.filter(id => !companyIds.includes(id)));
+    } else {
+      const newIds = companyIds.filter(id => !selectedCompanyIds.includes(id));
+      setSelectedCompanyIds([...selectedCompanyIds, ...newIds]);
+    }
+  };
+
   const canProceed = () => {
     switch (step) {
       case 1: return yearsExperienceTotal && yearsExperienceProduct && background;
@@ -480,7 +490,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
               </p>
 
               <div className="text-sm text-muted-foreground mb-2">
-                {selectedCompanyIds.length} empresa(s) selecionada(s)
+                {selectedCompanyIds.length} de {filteredCompanies.length} empresa(s) selecionada(s)
               </div>
 
               <div className="space-y-4">
@@ -491,17 +501,30 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                     WORK_MODEL_OPTIONS.find(opt => opt.value === wm)?.label
                   ).filter(Boolean);
                   
+                  const countryCompanyIds = companies.map(c => c.id);
+                  const allCountrySelected = countryCompanyIds.every(id => selectedCompanyIds.includes(id));
+                  const someCountrySelected = countryCompanyIds.some(id => selectedCompanyIds.includes(id));
+                  
                   return (
                     <div key={country}>
-                      <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                        <span className="text-xs text-muted-foreground">{countryInfo?.code}</span>
-                        {countryInfo?.label}
-                        {workModelLabels && workModelLabels.length > 0 && (
-                          <span className="text-xs font-normal text-muted-foreground">
-                            ({workModelLabels.join(", ")})
-                          </span>
-                        )}
-                      </h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-semibold flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{countryInfo?.code}</span>
+                          {countryInfo?.label}
+                          {workModelLabels && workModelLabels.length > 0 && (
+                            <span className="text-xs font-normal text-muted-foreground">
+                              ({workModelLabels.join(", ")})
+                            </span>
+                          )}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => toggleAllCompaniesInCountry(countryCompanyIds)}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {allCountrySelected ? "Desmarcar todas" : someCountrySelected ? "Selecionar todas" : "Selecionar todas"}
+                        </button>
+                      </div>
                       <div className="space-y-1">
                         {companies.map((company) => {
                           const isSelected = selectedCompanyIds.includes(company.id);
