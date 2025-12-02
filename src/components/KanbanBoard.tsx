@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Trash2 } from "lucide-react";
+import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OpportunityCard } from "./OpportunityCard";
@@ -143,9 +144,34 @@ export const KanbanBoard = ({
         });
       } else {
         const targetColumnTitle = COLUMNS.find(c => c.id === targetColumnId)?.title;
+        
+        // Trigger confetti when moved to offer
+        if (targetColumnId === "offer") {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d']
+          });
+          confetti({
+            particleCount: 50,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+        }
+        
         toast({
-          title: "Status atualizado",
-          description: `Movido para ${targetColumnTitle}`,
+          title: targetColumnId === "offer" ? "🎉 Parabéns!" : "Status atualizado",
+          description: targetColumnId === "offer" 
+            ? `Você recebeu uma oferta de ${opportunity.company_name}!`
+            : `Movido para ${targetColumnTitle}`,
         });
         onUpdate();
       }

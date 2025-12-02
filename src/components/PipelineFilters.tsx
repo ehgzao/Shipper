@@ -1,24 +1,52 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X, Tag } from "lucide-react";
+import { X, Tag, MapPin } from "lucide-react";
+
+// Flag images
+import flagBR from "@/assets/flags/br.png";
+import flagPT from "@/assets/flags/pt.png";
+import flagDE from "@/assets/flags/de.png";
+import flagES from "@/assets/flags/es.png";
+import flagIE from "@/assets/flags/ie.png";
+import flagNL from "@/assets/flags/nl.png";
+
+const COUNTRY_MAP: Record<string, { name: string; flag: string }> = {
+  brazil: { name: "Brasil", flag: flagBR },
+  brasil: { name: "Brasil", flag: flagBR },
+  portugal: { name: "Portugal", flag: flagPT },
+  germany: { name: "Alemanha", flag: flagDE },
+  alemanha: { name: "Alemanha", flag: flagDE },
+  spain: { name: "Espanha", flag: flagES },
+  espanha: { name: "Espanha", flag: flagES },
+  ireland: { name: "Irlanda", flag: flagIE },
+  irlanda: { name: "Irlanda", flag: flagIE },
+  netherlands: { name: "Holanda", flag: flagNL },
+  holanda: { name: "Holanda", flag: flagNL },
+};
 
 interface PipelineFiltersProps {
   companies: string[];
   tags: string[];
+  countries: string[];
   filters: {
     seniority: string;
     workModel: string;
     company: string;
     tag: string;
+    country: string;
   };
-  onFiltersChange: (filters: { seniority: string; workModel: string; company: string; tag: string }) => void;
+  onFiltersChange: (filters: { seniority: string; workModel: string; company: string; tag: string; country: string }) => void;
 }
 
-export const PipelineFilters = ({ companies, tags, filters, onFiltersChange }: PipelineFiltersProps) => {
-  const hasFilters = filters.seniority !== "all" || filters.workModel !== "all" || filters.company !== "all" || filters.tag !== "all";
+export const PipelineFilters = ({ companies, tags, countries, filters, onFiltersChange }: PipelineFiltersProps) => {
+  const hasFilters = filters.seniority !== "all" || filters.workModel !== "all" || filters.company !== "all" || filters.tag !== "all" || filters.country !== "all";
 
   const clearFilters = () => {
-    onFiltersChange({ seniority: "all", workModel: "all", company: "all", tag: "all" });
+    onFiltersChange({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all" });
+  };
+
+  const getCountryInfo = (country: string) => {
+    return COUNTRY_MAP[country.toLowerCase()] || { name: country.charAt(0).toUpperCase() + country.slice(1), flag: null };
   };
 
   return (
@@ -56,6 +84,34 @@ export const PipelineFilters = ({ companies, tags, filters, onFiltersChange }: P
           <SelectItem value="onsite">Presencial</SelectItem>
         </SelectContent>
       </Select>
+
+      {countries.length > 0 && (
+        <Select
+          value={filters.country}
+          onValueChange={(value) => onFiltersChange({ ...filters, country: value })}
+        >
+          <SelectTrigger className="w-[150px] bg-background">
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue placeholder="País" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {countries.map((country) => {
+              const info = getCountryInfo(country);
+              return (
+                <SelectItem key={country} value={country}>
+                  <div className="flex items-center gap-2">
+                    {info.flag && (
+                      <img src={info.flag} alt={info.name} className="w-4 h-3 object-cover rounded-sm" />
+                    )}
+                    {info.name}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      )}
 
       <Select
         value={filters.company}
