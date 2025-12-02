@@ -258,6 +258,10 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
       return acc;
     }, {} as Record<string, WorkModel[]>);
 
+    // Get suggested roles to save
+    const suggestedRoles = getSuggestedRoles(yearsExperienceProduct, background, strengthOrientation);
+    const targetRoles = suggestedRoles.map(r => r.role);
+
     // Update profile
     const { error: profileError } = await supabase
       .from("profiles")
@@ -269,6 +273,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
         country_work_preferences: countryWorkPrefsObj,
         preferred_company_stage: companyStages,
         strength_orientation: strengthOrientation as StrengthOrientation,
+        target_roles: targetRoles,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
       })
