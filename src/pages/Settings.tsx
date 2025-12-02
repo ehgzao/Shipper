@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw } from "lucide-react";
+import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw, Sun, Moon, Monitor } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/useTheme";
 import type { Database } from "@/integrations/supabase/types";
 import { profileSettingsSchema, passwordChangeSchema, getValidationError } from "@/lib/validations";
 
@@ -49,11 +50,11 @@ const FLAG_IMAGES: Record<string, string> = {
 
 const COUNTRIES = [
   { id: "portugal", name: "Portugal", code: "PT" },
-  { id: "brazil", name: "Brasil", code: "BR" },
-  { id: "germany", name: "Alemanha", code: "DE" },
-  { id: "spain", name: "Espanha", code: "ES" },
-  { id: "ireland", name: "Irlanda", code: "IE" },
-  { id: "netherlands", name: "Holanda", code: "NL" },
+  { id: "brazil", name: "Brazil", code: "BR" },
+  { id: "germany", name: "Germany", code: "DE" },
+  { id: "spain", name: "Spain", code: "ES" },
+  { id: "ireland", name: "Ireland", code: "IE" },
+  { id: "netherlands", name: "Netherlands", code: "NL" },
 ];
 
 const COMMON_ROLES = [
@@ -73,25 +74,26 @@ const WORK_MODELS = ["remote", "hybrid", "onsite"];
 const COMPANY_STAGES = ["tech_giant", "scaleup", "startup"];
 
 const BACKGROUND_OPTIONS: { value: AppRole; label: string }[] = [
-  { value: "engineering", label: "Engenharia" },
+  { value: "engineering", label: "Engineering" },
   { value: "design", label: "Design" },
-  { value: "sales", label: "Vendas" },
+  { value: "sales", label: "Sales" },
   { value: "marketing", label: "Marketing" },
-  { value: "operations", label: "Operações" },
-  { value: "consulting", label: "Consultoria" },
-  { value: "other", label: "Outro" },
+  { value: "operations", label: "Operations" },
+  { value: "consulting", label: "Consulting" },
+  { value: "other", label: "Other" },
 ];
 
 const STRENGTH_OPTIONS: { value: StrengthOrientation; label: string }[] = [
-  { value: "technical", label: "Técnico" },
-  { value: "business", label: "Negócios" },
-  { value: "balanced", label: "Equilibrado" },
+  { value: "technical", label: "Technical" },
+  { value: "business", label: "Business" },
+  { value: "balanced", label: "Balanced" },
 ];
 
 const Settings = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { theme, setTheme } = useTheme();
   
   // Profile form state
   const [fullName, setFullName] = useState("");
@@ -127,14 +129,14 @@ const Settings = () => {
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Onboarding reiniciado!",
-        description: "Você será redirecionado para refazer o onboarding.",
+        title: "Onboarding restarted!",
+        description: "You will be redirected to redo the onboarding.",
       });
       navigate("/dashboard");
     }
@@ -183,7 +185,7 @@ const Settings = () => {
     const validationError = getValidationError(profileSettingsSchema, formData);
     if (validationError) {
       toast({
-        title: "Erro de validação",
+        title: "Validation error",
         description: validationError,
         variant: "destructive",
       });
@@ -209,14 +211,14 @@ const Settings = () => {
 
     if (error) {
       toast({
-        title: "Erro ao salvar",
+        title: "Error saving",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Perfil atualizado!",
-        description: "Suas alterações foram salvas.",
+        title: "Profile updated!",
+        description: "Your changes have been saved.",
       });
     }
     setIsSaving(false);
@@ -231,7 +233,7 @@ const Settings = () => {
 
     if (validationError) {
       toast({
-        title: "Erro de validação",
+        title: "Validation error",
         description: validationError,
         variant: "destructive",
       });
@@ -246,14 +248,14 @@ const Settings = () => {
 
     if (error) {
       toast({
-        title: "Erro ao alterar senha",
+        title: "Error changing password",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Senha alterada!",
-        description: "Sua senha foi atualizada com sucesso.",
+        title: "Password changed!",
+        description: "Your password has been updated successfully.",
       });
       setCurrentPassword("");
       setNewPassword("");
@@ -324,7 +326,7 @@ const Settings = () => {
             </div>
             <h1 className="text-lg font-medium flex items-center gap-2">
               <SettingsIcon className="h-5 w-5" />
-              Configurações
+              Settings
             </h1>
           </div>
         </div>
@@ -333,26 +335,76 @@ const Settings = () => {
       {/* Main Content */}
       <main className="container-wide py-8 max-w-3xl">
         <div className="space-y-6">
+          {/* Theme Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sun className="h-5 w-5" />
+                Appearance
+              </CardTitle>
+              <CardDescription>
+                Customize how Shipper looks on your device
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTheme("light")}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                    theme === "light"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  <Sun className="h-6 w-6" />
+                  <span className="text-sm font-medium">Light</span>
+                </button>
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                    theme === "dark"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  <Moon className="h-6 w-6" />
+                  <span className="text-sm font-medium">Dark</span>
+                </button>
+                <button
+                  onClick={() => setTheme("system")}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                    theme === "system"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  <Monitor className="h-6 w-6" />
+                  <span className="text-sm font-medium">System</span>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Profile Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Perfil
+                Profile
               </CardTitle>
               <CardDescription>
-                Informações básicas do seu perfil
+                Basic profile information
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Label htmlFor="fullName">Full Name</Label>
                   <Input
                     id="fullName"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Seu nome"
+                    placeholder="Your name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -368,7 +420,7 @@ const Settings = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="yearsTotal">Anos de Experiência Total</Label>
+                  <Label htmlFor="yearsTotal">Total Years of Experience</Label>
                   <Input
                     id="yearsTotal"
                     type="number"
@@ -378,7 +430,7 @@ const Settings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="yearsProduct">Anos em Produto</Label>
+                  <Label htmlFor="yearsProduct">Years in Product</Label>
                   <Input
                     id="yearsProduct"
                     type="number"
@@ -391,10 +443,10 @@ const Settings = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Background Anterior</Label>
+                  <Label>Previous Background</Label>
                   <Select value={background} onValueChange={(v) => setBackground(v as AppRole)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
                       {BACKGROUND_OPTIONS.map((opt) => (
@@ -406,10 +458,10 @@ const Settings = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Orientação de Força</Label>
+                  <Label>Strength Orientation</Label>
                   <Select value={strength} onValueChange={(v) => setStrength(v as StrengthOrientation)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
                       {STRENGTH_OPTIONS.map((opt) => (
@@ -427,9 +479,9 @@ const Settings = () => {
           {/* Countries Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Países de Interesse</CardTitle>
+              <CardTitle>Countries of Interest</CardTitle>
               <CardDescription>
-                Selecione os países e modelos de trabalho preferidos
+                Select your preferred countries and work models
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -468,7 +520,7 @@ const Settings = () => {
                                 : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {model === "remote" ? "Remoto" : model === "hybrid" ? "Híbrido" : "Presencial"}
+                            {model === "remote" ? "Remote" : model === "hybrid" ? "Hybrid" : "On-site"}
                           </button>
                         ))}
                       </div>
@@ -482,9 +534,9 @@ const Settings = () => {
           {/* Company Stages Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Tipos de Empresa</CardTitle>
+              <CardTitle>Company Types</CardTitle>
               <CardDescription>
-                Quais estágios de empresa você prefere?
+                Which company stages do you prefer?
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -515,10 +567,10 @@ const Settings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5" />
-                Cargos Alvo
+                Target Roles
               </CardTitle>
               <CardDescription>
-                Cargos que você está buscando
+                Roles you are looking for
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -547,7 +599,7 @@ const Settings = () => {
                 <Input
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value)}
-                  placeholder="Adicionar cargo..."
+                  placeholder="Add role..."
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newRole.trim()) {
                       if (!targetRoles.includes(newRole.trim())) {
@@ -573,7 +625,7 @@ const Settings = () => {
 
               {/* Suggestions */}
               <div>
-                <p className="text-xs text-muted-foreground mb-2">Sugestões:</p>
+                <p className="text-xs text-muted-foreground mb-2">Suggestions:</p>
                 <div className="flex flex-wrap gap-1">
                   {COMMON_ROLES.filter(r => !targetRoles.includes(r)).slice(0, 6).map((role) => (
                     <button
@@ -592,7 +644,7 @@ const Settings = () => {
           {/* Save Button */}
           <Button onClick={handleSaveProfile} disabled={isSaving} className="w-full gap-2">
             <Save className="h-4 w-4" />
-            {isSaving ? "Salvando..." : "Salvar Alterações"}
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
 
           {/* Password Section */}
@@ -600,15 +652,15 @@ const Settings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="h-5 w-5" />
-                Alterar Senha
+                Change Password
               </CardTitle>
               <CardDescription>
-                Atualize sua senha de acesso
+                Update your access password
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="newPassword">Nova Senha</Label>
+                <Label htmlFor="newPassword">New Password</Label>
                 <Input
                   id="newPassword"
                   type="password"
@@ -618,7 +670,7 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -633,7 +685,7 @@ const Settings = () => {
                 variant="outline"
                 className="w-full"
               >
-                {isChangingPassword ? "Alterando..." : "Alterar Senha"}
+                {isChangingPassword ? "Changing..." : "Change Password"}
               </Button>
             </CardContent>
           </Card>
@@ -646,14 +698,14 @@ const Settings = () => {
                 Email
               </CardTitle>
               <CardDescription>
-                Seu email de acesso: {user?.email}
+                Your access email: {user?.email}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 {user?.email_confirmed_at 
-                  ? "✓ Email confirmado" 
-                  : "Email não confirmado. Verifique sua caixa de entrada."}
+                  ? "✓ Email confirmed" 
+                  : "Email not confirmed. Check your inbox."}
               </p>
             </CardContent>
           </Card>
@@ -663,15 +715,15 @@ const Settings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <RotateCcw className="h-5 w-5" />
-                Refazer Onboarding
+                Redo Onboarding
               </CardTitle>
               <CardDescription>
-                Reconfigure suas preferências e perfil
+                Reconfigure your preferences and profile
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Ao refazer o onboarding, você poderá atualizar suas preferências de países, tipos de empresa, cargos alvo e mais.
+                By redoing the onboarding, you can update your country preferences, company types, target roles, and more.
               </p>
               <Button 
                 onClick={handleRestartOnboarding} 
@@ -680,7 +732,7 @@ const Settings = () => {
                 className="w-full gap-2"
               >
                 <RotateCcw className="h-4 w-4" />
-                {isRestartingOnboarding ? "Reiniciando..." : "Refazer Onboarding"}
+                {isRestartingOnboarding ? "Restarting..." : "Redo Onboarding"}
               </Button>
             </CardContent>
           </Card>

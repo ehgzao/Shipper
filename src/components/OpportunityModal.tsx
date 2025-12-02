@@ -58,6 +58,7 @@ export interface Opportunity {
   updated_at: string | null;
   applied_at: string | null;
   tags: string[] | null;
+  display_order?: number | null;
 }
 
 export interface OpportunityProfile {

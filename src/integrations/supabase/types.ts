@@ -21,6 +21,7 @@ export type Database = {
           contact_linkedin: string | null
           contact_name: string | null
           created_at: string | null
+          display_order: number | null
           id: string
           job_url: string | null
           location: string | null
@@ -47,6 +48,7 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string
           job_url?: string | null
           location?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string
           job_url?: string | null
           location?: string | null
@@ -151,6 +154,7 @@ export type Database = {
             | Database["public"]["Enums"]["strength_orientation"]
             | null
           target_roles: string[] | null
+          theme_preference: string | null
           updated_at: string | null
           verification_frequency_days: number | null
           years_experience_product: number | null
@@ -172,6 +176,7 @@ export type Database = {
             | Database["public"]["Enums"]["strength_orientation"]
             | null
           target_roles?: string[] | null
+          theme_preference?: string | null
           updated_at?: string | null
           verification_frequency_days?: number | null
           years_experience_product?: number | null
@@ -193,6 +198,7 @@ export type Database = {
             | Database["public"]["Enums"]["strength_orientation"]
             | null
           target_roles?: string[] | null
+          theme_preference?: string | null
           updated_at?: string | null
           verification_frequency_days?: number | null
           years_experience_product?: number | null
