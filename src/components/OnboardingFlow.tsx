@@ -7,6 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
+// Flag images
+import flagBR from "@/assets/flags/br.png";
+import flagPT from "@/assets/flags/pt.png";
+import flagDE from "@/assets/flags/de.png";
+import flagES from "@/assets/flags/es.png";
+import flagIE from "@/assets/flags/ie.png";
+import flagNL from "@/assets/flags/nl.png";
+
 type AppRole = Database["public"]["Enums"]["app_role"];
 type StrengthOrientation = Database["public"]["Enums"]["strength_orientation"];
 type WorkModel = Database["public"]["Enums"]["work_model"];
@@ -54,6 +62,15 @@ const BACKGROUND_OPTIONS: { value: AppRole; label: string }[] = [
   { value: "consulting", label: "Consultoria" },
   { value: "other", label: "Outro" },
 ];
+
+const FLAG_IMAGES: Record<string, string> = {
+  BR: flagBR,
+  PT: flagPT,
+  DE: flagDE,
+  ES: flagES,
+  IE: flagIE,
+  NL: flagNL,
+};
 
 const COUNTRY_OPTIONS = [
   { value: "brazil", code: "BR", label: "Brasil" },
@@ -395,7 +412,11 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                           checked={isSelected}
                           onCheckedChange={() => toggleCountry(country.value)}
                         />
-                        <span className="text-xs font-bold text-muted-foreground w-6">{country.code}</span>
+                        <img 
+                          src={FLAG_IMAGES[country.code]} 
+                          alt={country.label} 
+                          className="w-6 h-4 object-cover rounded-sm"
+                        />
                         <span className="font-medium">{country.label}</span>
                       </label>
                       
@@ -509,7 +530,13 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                     <div key={country}>
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-semibold flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{countryInfo?.code}</span>
+                          {countryInfo?.code && (
+                            <img 
+                              src={FLAG_IMAGES[countryInfo.code]} 
+                              alt={countryInfo?.label} 
+                              className="w-5 h-3.5 object-cover rounded-sm"
+                            />
+                          )}
                           {countryInfo?.label}
                           {workModelLabels && workModelLabels.length > 0 && (
                             <span className="text-xs font-normal text-muted-foreground">
