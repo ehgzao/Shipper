@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ship, ArrowLeft, Briefcase, MapPin, TrendingUp, Target, CheckCircle, Clock, Calendar } from "lucide-react";
+import { Ship, ArrowLeft, Briefcase, MapPin, TrendingUp, TrendingDown, Target, CheckCircle, Clock, Calendar, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +92,17 @@ const getDateThreshold = (period: TimePeriod): Date | null => {
   }
 };
 
+const getPreviousPeriodRange = (period: TimePeriod): { start: Date; end: Date } | null => {
+  const now = new Date();
+  switch (period) {
+    case "week": return { start: subDays(now, 14), end: subDays(now, 7) };
+    case "month": return { start: subMonths(now, 2), end: subMonths(now, 1) };
+    case "3months": return { start: subMonths(now, 6), end: subMonths(now, 3) };
+    case "6months": return { start: subMonths(now, 12), end: subMonths(now, 6) };
+    default: return null;
+  }
+};
+
 const Stats = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,6 +134,18 @@ const Stats = () => {
     return opportunities.filter(o => {
       if (!o.created_at) return false;
       return isAfter(parseISO(o.created_at), threshold);
+    });
+  }, [opportunities, timePeriod]);
+
+  // Previous period opportunities for comparison
+  const previousPeriodOpportunities = useMemo(() => {
+    const range = getPreviousPeriodRange(timePeriod);
+    if (!range) return [];
+    
+    return opportunities.filter(o => {
+      if (!o.created_at) return false;
+      const date = parseISO(o.created_at);
+      return isAfter(date, range.start) && !isAfter(date, range.end);
     });
   }, [opportunities, timePeriod]);
 
@@ -179,6 +202,21 @@ const Stats = () => {
     
     return { total, applied, interviewing: interviewingOnly, offers, applicationToInterviewRate, interviewToOfferRate };
   }, [filteredOpportunities]);
+
+  // Previous period stats for comparison
+  const previousPeriodStats = useMemo(() => {
+    if (previousPeriodOpportunities.length === 0) return null;
+    
+    const applied = previousPeriodOpportunities.filter(o => o.status !== "researching").length;
+    const interviewing = previousPeriodOpportunities.filter(o => o.status === "interviewing" || o.status === "offer").length;
+    const offers = previousPeriodOpportunities.filter(o => o.status === "offer").length;
+    const interviewingOnly = previousPeriodOpportunities.filter(o => o.status === "interviewing").length;
+    
+    const applicationToInterviewRate = applied > 0 ? Math.round((interviewing / applied) * 100) : 0;
+    const interviewToOfferRate = (interviewingOnly + offers) > 0 ? Math.round((offers / (interviewingOnly + offers)) * 100) : 0;
+    
+    return { applicationToInterviewRate, interviewToOfferRate };
+  }, [previousPeriodOpportunities]);
 
   // Tag statistics
   const tagStats = useMemo(() => {
@@ -374,6 +412,26 @@ const Stats = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-3xl font-bold text-blue-500">{summaryStats.applicationToInterviewRate}%</p>
+                      {previousPeriodStats && timePeriod !== "all" && (
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          {summaryStats.applicationToInterviewRate > previousPeriodStats.applicationToInterviewRate ? (
+                            <ArrowUpRight className="h-3.5 w-3.5 text-green-500" />
+                          ) : summaryStats.applicationToInterviewRate < previousPeriodStats.applicationToInterviewRate ? (
+                            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                          ) : (
+                            <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          <span className={`text-xs ${
+                            summaryStats.applicationToInterviewRate > previousPeriodStats.applicationToInterviewRate 
+                              ? "text-green-500" 
+                              : summaryStats.applicationToInterviewRate < previousPeriodStats.applicationToInterviewRate 
+                                ? "text-red-500" 
+                                : "text-muted-foreground"
+                          }`}>
+                            {previousPeriodStats.applicationToInterviewRate}% período anterior
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
@@ -400,6 +458,26 @@ const Stats = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-3xl font-bold text-green-500">{summaryStats.interviewToOfferRate}%</p>
+                      {previousPeriodStats && timePeriod !== "all" && (
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          {summaryStats.interviewToOfferRate > previousPeriodStats.interviewToOfferRate ? (
+                            <ArrowUpRight className="h-3.5 w-3.5 text-green-500" />
+                          ) : summaryStats.interviewToOfferRate < previousPeriodStats.interviewToOfferRate ? (
+                            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                          ) : (
+                            <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          <span className={`text-xs ${
+                            summaryStats.interviewToOfferRate > previousPeriodStats.interviewToOfferRate 
+                              ? "text-green-500" 
+                              : summaryStats.interviewToOfferRate < previousPeriodStats.interviewToOfferRate 
+                                ? "text-red-500" 
+                                : "text-muted-foreground"
+                          }`}>
+                            {previousPeriodStats.interviewToOfferRate}% período anterior
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
