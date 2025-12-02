@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { StaleNotifications } from "@/components/StaleNotifications";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -462,6 +463,10 @@ const Dashboard = () => {
           </div>
 
           <TabsContent value="pipeline" className="mt-0">
+            <StaleNotifications 
+              opportunities={opportunities}
+              onOpportunityClick={handleOpportunityClick}
+            />
             <PipelineFilters 
               companies={companyNames}
               tags={allTags}
@@ -469,7 +474,7 @@ const Dashboard = () => {
               filters={filters}
               onFiltersChange={setFilters}
             />
-            <KanbanBoard 
+            <KanbanBoard
               opportunities={filteredOpportunities}
               onOpportunityClick={handleOpportunityClick}
               onUpdate={fetchData}

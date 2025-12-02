@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
 import { subDays, subMonths, isAfter, parseISO, format, startOfWeek, startOfMonth, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FunnelTimingStats } from "@/components/FunnelTimingStats";
+import type { Opportunity as OpportunityType } from "@/components/OpportunityModal";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -25,6 +27,8 @@ interface Opportunity {
   status: string;
   location: string | null;
   created_at: string | null;
+  updated_at: string | null;
+  applied_at: string | null;
   tags: string[] | null;
 }
 
@@ -116,7 +120,7 @@ const Stats = () => {
 
       const { data } = await supabase
         .from("opportunities")
-        .select("id, company_name, role_title, status, location, created_at, tags")
+        .select("id, company_name, role_title, status, location, created_at, updated_at, applied_at, tags")
         .eq("user_id", user.id);
 
       if (data) setOpportunities(data);
@@ -489,6 +493,9 @@ const Stats = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Funnel Timing Stats */}
+            <FunnelTimingStats opportunities={opportunities as OpportunityType[]} />
 
             {/* Charts */}
             <div className="grid md:grid-cols-2 gap-6">
