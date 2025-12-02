@@ -466,6 +466,7 @@ const Dashboard = () => {
               onDuplicate={handleDuplicateOpportunity}
               onUpdateTags={handleUpdateOpportunityTags}
               onUpdateRole={handleUpdateOpportunityRole}
+              allTags={allTags}
             />
           </TabsContent>
           

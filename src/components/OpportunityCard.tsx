@@ -39,6 +39,7 @@ interface OpportunityCardProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  allTags?: string[];
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
@@ -88,7 +89,8 @@ export const OpportunityCard = ({
   onDelete, 
   onDuplicate,
   onUpdateTags,
-  onUpdateRole 
+  onUpdateRole,
+  allTags = []
 }: OpportunityCardProps) => {
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState("");
@@ -355,19 +357,61 @@ export const OpportunityCard = ({
               )}
               
               {showTagInput && (
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  onBlur={() => {
-                    setNewTag("");
-                    setShowTagInput(false);
-                  }}
-                  placeholder="Nova tag..."
-                  className="h-5 w-20 text-xs px-1 py-0"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={handleAddTag}
+                    onBlur={() => {
+                      // Delay to allow clicking suggestions
+                      setTimeout(() => {
+                        setNewTag("");
+                        setShowTagInput(false);
+                      }, 200);
+                    }}
+                    placeholder="Nova tag..."
+                    className="h-5 w-24 text-xs px-1 py-0"
+                    autoFocus
+                  />
+                  {/* Tag suggestions dropdown */}
+                  {allTags.length > 0 && (
+                    <div className="absolute top-6 left-0 z-50 bg-popover border border-border rounded-md shadow-lg max-h-32 overflow-y-auto min-w-[120px]">
+                      {allTags
+                        .filter(tag => 
+                          !opportunity.tags?.includes(tag) && 
+                          (newTag === "" || tag.toLowerCase().includes(newTag.toLowerCase()))
+                        )
+                        .slice(0, 5)
+                        .map(tag => (
+                          <button
+                            key={tag}
+                            className="w-full px-2 py-1 text-xs text-left hover:bg-muted transition-colors flex items-center gap-1"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (onUpdateTags) {
+                                const currentTags = opportunity.tags || [];
+                                onUpdateTags(opportunity.id, [...currentTags, tag]);
+                              }
+                              setNewTag("");
+                              setShowTagInput(false);
+                            }}
+                          >
+                            <Tag className="h-3 w-3 text-muted-foreground" />
+                            {tag}
+                          </button>
+                        ))}
+                      {allTags.filter(tag => 
+                        !opportunity.tags?.includes(tag) && 
+                        (newTag === "" || tag.toLowerCase().includes(newTag.toLowerCase()))
+                      ).length === 0 && newTag && (
+                        <div className="px-2 py-1 text-xs text-muted-foreground">
+                          Enter para criar "{newTag}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

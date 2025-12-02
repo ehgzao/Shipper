@@ -47,6 +47,7 @@ interface KanbanBoardProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  allTags?: string[];
 }
 
 export const KanbanBoard = ({ 
@@ -56,7 +57,8 @@ export const KanbanBoard = ({
   onDelete,
   onDuplicate,
   onUpdateTags,
-  onUpdateRole
+  onUpdateRole,
+  allTags
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -172,6 +174,7 @@ export const KanbanBoard = ({
               onDuplicate={onDuplicate}
               onUpdateTags={onUpdateTags}
               onUpdateRole={onUpdateRole}
+              allTags={allTags}
             />
           );
         })}
@@ -200,9 +203,10 @@ interface KanbanColumnProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  allTags?: string[];
 }
 
-const KanbanColumn = ({ 
+const KanbanColumn = ({
   column, 
   opportunities, 
   onOpportunityClick, 
@@ -210,7 +214,8 @@ const KanbanColumn = ({
   onDelete,
   onDuplicate,
   onUpdateTags,
-  onUpdateRole
+  onUpdateRole,
+  allTags
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -294,6 +299,7 @@ const KanbanColumn = ({
                 onDuplicate={onDuplicate}
                 onUpdateTags={onUpdateTags}
                 onUpdateRole={onUpdateRole}
+                allTags={allTags}
               />
             ))
           )}
