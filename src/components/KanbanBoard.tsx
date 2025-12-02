@@ -45,13 +45,13 @@ interface KanbanColumn {
 }
 
 const COLUMNS: KanbanColumn[] = [
-  { id: "researching", title: "Pesquisando", color: "bg-muted-foreground", borderColor: "border-muted-foreground", dragHint: "Pesquisando vagas? Arraste cards para cá" },
-  { id: "applied", title: "Candidatado", color: "bg-status-applied", borderColor: "border-status-applied", dragHint: "Se inscreveu em uma vaga? Arraste card para cá" },
-  { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing", borderColor: "border-status-interviewing", dragHint: "Agendou uma entrevista? Arraste card para cá" },
-  { id: "technical_test", title: "Teste Técnico", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Recebeu um teste técnico? Arraste card para cá" },
-  { id: "final_interview", title: "Entrevista Final", color: "bg-pink-500", borderColor: "border-pink-500", dragHint: "Avançou para entrevista final? Arraste card para cá" },
-  { id: "offer", title: "Oferta", color: "bg-status-offer", borderColor: "border-status-offer", dragHint: "Recebeu uma oferta? Parabéns! Arraste card para cá 🎉" },
-  { id: "trash", title: "Lixeira", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
+  { id: "researching", title: "Researching", color: "bg-muted-foreground", borderColor: "border-muted-foreground", dragHint: "Researching jobs? Drag cards here" },
+  { id: "applied", title: "Applied", color: "bg-status-applied", borderColor: "border-status-applied", dragHint: "Applied to a job? Drag card here" },
+  { id: "interviewing", title: "Interviewing", color: "bg-status-interviewing", borderColor: "border-status-interviewing", dragHint: "Scheduled an interview? Drag card here" },
+  { id: "technical_test", title: "Technical Test", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Received a technical test? Drag card here" },
+  { id: "final_interview", title: "Final Interview", color: "bg-pink-500", borderColor: "border-pink-500", dragHint: "Advanced to final interview? Drag card here" },
+  { id: "offer", title: "Offer", color: "bg-status-offer", borderColor: "border-status-offer", dragHint: "Received an offer? Congrats! Drag card here 🎉" },
+  { id: "trash", title: "Trash", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
 ];
 
 interface KanbanBoardProps {
@@ -145,7 +145,7 @@ export const KanbanBoard = ({
 
       if (error) {
         toast({
-          title: "Erro ao atualizar",
+          title: "Error updating",
           description: error.message,
           variant: "destructive",
         });
@@ -175,10 +175,10 @@ export const KanbanBoard = ({
         }
         
         toast({
-          title: targetColumnId === "offer" ? "🎉 Parabéns!" : "Status atualizado",
+          title: targetColumnId === "offer" ? "🎉 Congratulations!" : "Status updated",
           description: targetColumnId === "offer" 
-            ? `Você recebeu uma oferta de ${opportunity.company_name}!`
-            : `Movido para ${targetColumnTitle}`,
+            ? `You received an offer from ${opportunity.company_name}!`
+            : `Moved to ${targetColumnTitle}`,
         });
         onUpdate();
       }
@@ -195,14 +195,14 @@ export const KanbanBoard = ({
 
     if (error) {
       toast({
-        title: "Erro ao excluir",
+        title: "Error deleting",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade excluída",
-        description: `${pendingTrashOpportunity.company_name} foi removida.`,
+        title: "Opportunity deleted",
+        description: `${pendingTrashOpportunity.company_name} was removed.`,
       });
       onUpdate();
     }
@@ -259,19 +259,19 @@ export const KanbanBoard = ({
       <AlertDialog open={!!pendingTrashOpportunity} onOpenChange={(open) => !open && setPendingTrashOpportunity(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+            <AlertDialogTitle>Delete opportunity?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a oportunidade em <strong>{pendingTrashOpportunity?.company_name}</strong> ({pendingTrashOpportunity?.role_title})?
-              Esta ação não pode ser desfeita.
+              Are you sure you want to delete the opportunity at <strong>{pendingTrashOpportunity?.company_name}</strong> ({pendingTrashOpportunity?.role_title})?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleConfirmDelete}
             >
-              Excluir
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -337,11 +337,11 @@ const KanbanColumn = ({
             isOver ? "text-destructive" : "text-muted-foreground/30"
           }`} />
           <p className="font-medium">
-            {isOver ? "Solte para excluir!" : "Arraste para excluir"}
+            {isOver ? "Drop to delete!" : "Drag to delete"}
           </p>
           {isOver && (
             <p className="text-xs mt-1">
-              ⚠️ Você precisará confirmar
+              ⚠️ You'll need to confirm
             </p>
           )}
         </div>
@@ -378,8 +378,8 @@ const KanbanColumn = ({
             <div className={`text-center py-6 text-muted-foreground text-xs border-2 border-dashed rounded-lg transition-all duration-200 ${
               isOver ? `${column.borderColor}` : "border-border"
             }`}>
-              <p className="font-medium">{isOver ? "Solte aqui!" : "Nenhuma oportunidade"}</p>
-              <p className="mt-1 px-2">{isDragging && column.dragHint ? column.dragHint : "Arraste cards para cá"}</p>
+              <p className="font-medium">{isOver ? "Drop here!" : "No opportunities"}</p>
+              <p className="mt-1 px-2">{isDragging && column.dragHint ? column.dragHint : "Drag cards here"}</p>
             </div>
           ) : (
             opportunities.map((opportunity, index) => (

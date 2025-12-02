@@ -38,11 +38,11 @@ const FLAG_IMAGES: Record<string, string> = {
 
 const countryMap: Record<string, { name: string; code: string }> = {
   portugal: { name: "Portugal", code: "PT" },
-  brazil: { name: "Brasil", code: "BR" },
-  germany: { name: "Alemanha", code: "DE" },
-  spain: { name: "Espanha", code: "ES" },
-  ireland: { name: "Irlanda", code: "IE" },
-  netherlands: { name: "Holanda", code: "NL" },
+  brazil: { name: "Brazil", code: "BR" },
+  germany: { name: "Germany", code: "DE" },
+  spain: { name: "Spain", code: "ES" },
+  ireland: { name: "Ireland", code: "IE" },
+  netherlands: { name: "Netherlands", code: "NL" },
 };
 
 export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdded }: PresetCompaniesViewProps) => {
@@ -106,14 +106,14 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Empresa adicionada!",
-        description: `${company.company_name} foi adicionada às suas empresas alvo.`,
+        title: "Company added!",
+        description: `${company.company_name} was added to your target companies.`,
       });
       onCompanyAdded();
     }
@@ -149,9 +149,9 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
     return (
       <div className="bg-background rounded-xl border border-border p-12 text-center">
         <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="font-semibold text-lg mb-2">Database vazia</h3>
+        <h3 className="font-semibold text-lg mb-2">Empty database</h3>
         <p className="text-muted-foreground text-sm">
-          Nenhuma empresa pré-cadastrada disponível.
+          No preset companies available.
         </p>
       </div>
     );
@@ -161,7 +161,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
     <div className="space-y-6">
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
         <p className="text-sm text-muted-foreground">
-          Explore nossa base de empresas curadas e adicione às suas empresas alvo para acompanhar oportunidades.
+          Explore our curated company database and add them to your target companies to track opportunities.
         </p>
       </div>
 
@@ -169,7 +169,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Filtros:
+          Filters:
         </div>
         
         {/* Country filter */}
@@ -182,7 +182,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                 : "bg-background border-border hover:bg-muted"
             }`}
           >
-            Todos países
+            All countries
           </button>
           {countries.map((country) => {
             const info = countryMap[country];
@@ -216,7 +216,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                 : "bg-background border-border hover:bg-muted"
             }`}
           >
-            Todos tipos
+            All types
           </button>
           {companyTypes.map((type) => (
             <button
@@ -246,7 +246,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                 )}
                 {info?.name || country}
                 <span className="text-muted-foreground font-normal">
-                  ({countryCompanies.length} empresas)
+                  ({countryCompanies.length} companies)
                 </span>
               </h3>
             </div>
@@ -274,14 +274,14 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                           asChild
                         >
                           <a href={company.careers_url} target="_blank" rel="noopener noreferrer">
-                            Ver Vagas
+                            View Jobs
                           </a>
                         </Button>
                       )}
                       {isAlreadyAdded ? (
                         <Button size="sm" variant="secondary" disabled className="gap-1">
                           <Check className="h-4 w-4" />
-                          Adicionada
+                          Added
                         </Button>
                       ) : (
                         <Button 
@@ -290,7 +290,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                           disabled={isAdding}
                         >
                           <Plus className="h-4 w-4 mr-1" />
-                          {isAdding ? "Adicionando..." : "Adicionar"}
+                          {isAdding ? "Adding..." : "Add"}
                         </Button>
                       )}
                     </div>

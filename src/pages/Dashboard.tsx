@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { StaleNotifications } from "@/components/StaleNotifications";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -180,8 +181,8 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     toast({
-      title: "Até logo!",
-      description: "Você foi desconectado com sucesso.",
+      title: "Goodbye!",
+      description: "You have been signed out successfully.",
     });
     navigate("/");
   };
@@ -219,14 +220,14 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao excluir",
+        title: "Error deleting",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade excluída",
-        description: "A oportunidade foi removida.",
+        title: "Opportunity deleted",
+        description: "The opportunity was removed.",
       });
       fetchData();
     }
@@ -252,14 +253,14 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao duplicar",
+        title: "Error duplicating",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade duplicada",
-        description: `Cópia de ${opportunity.company_name} criada.`,
+        title: "Opportunity duplicated",
+        description: `Copy of ${opportunity.company_name} created.`,
       });
       fetchData();
     }
@@ -273,7 +274,7 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao atualizar tags",
+        title: "Error updating tags",
         description: error.message,
         variant: "destructive",
       });
@@ -290,7 +291,7 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao atualizar cargo",
+        title: "Error updating role",
         description: error.message,
         variant: "destructive",
       });
@@ -299,7 +300,7 @@ const Dashboard = () => {
     }
   };
 
-  const FROZEN_TAG = "🧊 VAGA CONGELADA";
+  const FROZEN_TAG = "🧊 FROZEN";
 
   const handleFreezeOpportunity = async (id: string, frozen: boolean) => {
     const opportunity = opportunities.find(o => o.id === id);
@@ -323,16 +324,16 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao atualizar",
+        title: "Error updating",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: frozen ? "🧊 Vaga congelada" : "Vaga descongelada",
+        title: frozen ? "🧊 Job frozen" : "Job unfrozen",
         description: frozen 
-          ? `${opportunity.company_name} foi congelada.` 
-          : `${opportunity.company_name} foi descongelada.`,
+          ? `${opportunity.company_name} was frozen.` 
+          : `${opportunity.company_name} was unfrozen.`,
       });
       fetchData();
     }
@@ -350,41 +351,18 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao limpar funil",
+        title: "Error clearing pipeline",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Funil limpo",
-        description: "Todas as oportunidades foram removidas.",
+        title: "Pipeline cleared",
+        description: "All opportunities were removed.",
       });
       fetchData();
     }
     setShowClearConfirm(false);
-  };
-
-  const handleClearTargetCompanies = async () => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("target_companies")
-      .delete()
-      .eq("user_id", user.id);
-
-    if (error) {
-      toast({
-        title: "Erro ao limpar empresas",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Empresas removidas",
-        description: "Todas as empresas alvo foram removidas.",
-      });
-      fetchData();
-    }
   };
 
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
@@ -402,14 +380,14 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade criada!",
-        description: `${company.company_name} adicionada ao pipeline.`,
+        title: "Opportunity created!",
+        description: `${company.company_name} added to pipeline.`,
       });
       fetchData();
     }
@@ -423,14 +401,14 @@ const Dashboard = () => {
 
     if (error) {
       toast({
-        title: "Erro ao excluir",
+        title: "Error deleting",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Empresa removida",
-        description: "A empresa foi removida da sua lista.",
+        title: "Company removed",
+        description: "The company was removed from your list.",
       });
       fetchData();
     }
@@ -458,7 +436,7 @@ const Dashboard = () => {
               <Ship className="h-6 w-6 text-primary" />
               <span className="font-semibold text-lg">Shipper</span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/stats">
                   <TrendingUp className="h-5 w-5" />
@@ -469,6 +447,7 @@ const Dashboard = () => {
                   <Settings className="h-5 w-5" />
                 </Link>
               </Button>
+              <ThemeToggle />
               <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -489,8 +468,8 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-warning" />
               <span className="text-sm">
-                Bem-vindo, <strong>{profile?.full_name || "usuário"}</strong>! 
-                Comece adicionando oportunidades ao seu pipeline.
+                Welcome, <strong>{profile?.full_name || "user"}</strong>! 
+                Start by adding opportunities to your pipeline.
               </span>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setShowAlert(false)}>
@@ -514,7 +493,7 @@ const Dashboard = () => {
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Buscar empresas, cargos..."
+            placeholder="Search companies, roles..."
           />
         </div>
 
@@ -532,7 +511,7 @@ const Dashboard = () => {
               </TabsTrigger>
               <TabsTrigger value="companies" className="gap-2">
                 <Building2 className="h-4 w-4" />
-                Empresas Alvo
+                Target Companies
                 {targetCompanies.length > 0 && (
                   <span className="ml-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                     {targetCompanies.length}
@@ -547,7 +526,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Button className="gap-2" onClick={handleNewOpportunity}>
                 <Plus className="h-4 w-4" />
-                Nova Oportunidade
+                New Opportunity
               </Button>
               {opportunities.length > 0 && (
                 <Button 
@@ -556,7 +535,7 @@ const Dashboard = () => {
                   onClick={() => setShowClearConfirm(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Limpar Funil
+                  Clear Pipeline
                 </Button>
               )}
             </div>
@@ -593,8 +572,6 @@ const Dashboard = () => {
               opportunities={opportunities}
               onCreateOpportunity={handleCreateOpportunityFromCompany}
               onDeleteCompany={handleDeleteTargetCompany}
-              onClearAllCompanies={handleClearTargetCompanies}
-              totalCompaniesCount={targetCompanies.length}
             />
           </TabsContent>
 
@@ -624,23 +601,23 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Clear Funnel Confirmation Dialog */}
+      {/* Clear Pipeline Confirmation Dialog */}
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar todo o funil?</AlertDialogTitle>
+            <AlertDialogTitle>Clear entire pipeline?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir <strong>todas as {opportunities.length} oportunidades</strong> do seu pipeline?
-              Esta ação não pode ser desfeita.
+              Are you sure you want to delete <strong>all {opportunities.length} opportunities</strong> from your pipeline?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleClearFunnel}
             >
-              Limpar Tudo
+              Clear All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -654,8 +631,6 @@ interface CompaniesViewProps {
   opportunities: Opportunity[];
   onCreateOpportunity: (company: TargetCompany, role?: string) => void;
   onDeleteCompany: (companyId: string) => void;
-  onClearAllCompanies: () => void;
-  totalCompaniesCount: number;
 }
 
 const FLAG_IMAGES: Record<string, string> = {
@@ -669,18 +644,17 @@ const FLAG_IMAGES: Record<string, string> = {
 
 const countryMap: Record<string, { name: string; code: string }> = {
   portugal: { name: "Portugal", code: "PT" },
-  brazil: { name: "Brasil", code: "BR" },
-  germany: { name: "Alemanha", code: "DE" },
-  spain: { name: "Espanha", code: "ES" },
-  ireland: { name: "Irlanda", code: "IE" },
-  netherlands: { name: "Holanda", code: "NL" },
+  brazil: { name: "Brazil", code: "BR" },
+  germany: { name: "Germany", code: "DE" },
+  spain: { name: "Spain", code: "ES" },
+  ireland: { name: "Ireland", code: "IE" },
+  netherlands: { name: "Netherlands", code: "NL" },
 };
 
-const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany, onClearAllCompanies, totalCompaniesCount }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<TargetCompany | null>(null);
-  const [showClearCompaniesConfirm, setShowClearCompaniesConfirm] = useState(false);
 
   const getOpportunityCountByCompany = (companyName: string) => {
     return opportunities.filter(o => o.company_name === companyName).length;
@@ -729,9 +703,9 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
     return (
       <div className="bg-background rounded-xl border border-border p-12 text-center">
         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="font-semibold text-lg mb-2">Nenhuma empresa alvo</h3>
+        <h3 className="font-semibold text-lg mb-2">No target companies</h3>
         <p className="text-muted-foreground text-sm">
-          Complete o onboarding para adicionar empresas à sua lista.
+          Complete onboarding to add companies to your list.
         </p>
       </div>
     );
@@ -743,7 +717,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Filtros:
+          Filters:
         </div>
 
         {/* Country filter */}
@@ -756,7 +730,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                 : "bg-background border-border hover:bg-muted"
             }`}
           >
-            Todos países
+            All countries
           </button>
           {countries.map((country) => {
             const info = countryMap[country];
@@ -796,19 +770,6 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
             </button>
           ))}
         </div>
-
-        {/* Clear all button */}
-        {totalCompaniesCount > 0 && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground ml-auto"
-            onClick={() => setShowClearCompaniesConfirm(true)}
-          >
-            <Trash2 className="h-4 w-4" />
-            Limpar Empresas Alvo
-          </Button>
-        )}
       </div>
 
 
@@ -845,7 +806,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                     </span>
                     {oppCount > 0 && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {oppCount} {oppCount === 1 ? "oportunidade" : "oportunidades"}
+                        {oppCount} {oppCount === 1 ? "opportunity" : "opportunities"}
                       </span>
                     )}
                   </div>
@@ -855,7 +816,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                   {company.careers_url && (
                     <Button variant="outline" size="sm" asChild>
                       <a href={company.careers_url} target="_blank" rel="noopener noreferrer">
-                        Ver Vagas
+                        View Jobs
                       </a>
                     </Button>
                   )}
@@ -872,7 +833,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                     onClick={() => onCreateOpportunity(company)}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Criar Oportunidade
+                    Create Opportunity
                   </Button>
                 </div>
               </div>
@@ -887,18 +848,18 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
       <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir empresa?</AlertDialogTitle>
+            <AlertDialogTitle>Delete company?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>{companyToDelete?.company_name}</strong> da sua lista de empresas alvo?
+              Are you sure you want to remove <strong>{companyToDelete?.company_name}</strong> from your target companies?
               {getOpportunityCountByCompany(companyToDelete?.company_name || "") > 0 && (
                 <span className="block mt-2 text-warning">
-                  Esta empresa possui {getOpportunityCountByCompany(companyToDelete?.company_name || "")} oportunidade(s) associada(s).
+                  This company has {getOpportunityCountByCompany(companyToDelete?.company_name || "")} associated opportunity(s).
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -908,32 +869,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                 }
               }}
             >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Clear All Companies Confirmation Dialog */}
-      <AlertDialog open={showClearCompaniesConfirm} onOpenChange={setShowClearCompaniesConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Limpar todas as empresas alvo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>todas as {totalCompaniesCount} empresas</strong> da sua lista?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                onClearAllCompanies();
-                setShowClearCompaniesConfirm(false);
-              }}
-            >
-              Limpar Tudo
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

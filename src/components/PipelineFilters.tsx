@@ -11,17 +11,17 @@ import flagIE from "@/assets/flags/ie.png";
 import flagNL from "@/assets/flags/nl.png";
 
 const COUNTRY_MAP: Record<string, { name: string; flag: string }> = {
-  brazil: { name: "Brasil", flag: flagBR },
-  brasil: { name: "Brasil", flag: flagBR },
+  brazil: { name: "Brazil", flag: flagBR },
+  brasil: { name: "Brazil", flag: flagBR },
   portugal: { name: "Portugal", flag: flagPT },
-  germany: { name: "Alemanha", flag: flagDE },
-  alemanha: { name: "Alemanha", flag: flagDE },
-  spain: { name: "Espanha", flag: flagES },
-  espanha: { name: "Espanha", flag: flagES },
-  ireland: { name: "Irlanda", flag: flagIE },
-  irlanda: { name: "Irlanda", flag: flagIE },
-  netherlands: { name: "Holanda", flag: flagNL },
-  holanda: { name: "Holanda", flag: flagNL },
+  germany: { name: "Germany", flag: flagDE },
+  alemanha: { name: "Germany", flag: flagDE },
+  spain: { name: "Spain", flag: flagES },
+  espanha: { name: "Spain", flag: flagES },
+  ireland: { name: "Ireland", flag: flagIE },
+  irlanda: { name: "Ireland", flag: flagIE },
+  netherlands: { name: "Netherlands", flag: flagNL },
+  holanda: { name: "Netherlands", flag: flagNL },
 };
 
 interface PipelineFiltersProps {
@@ -56,10 +56,10 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
         onValueChange={(value) => onFiltersChange({ ...filters, seniority: value })}
       >
         <SelectTrigger className="w-[150px] bg-background">
-          <SelectValue placeholder="Senioridade" />
+          <SelectValue placeholder="Seniority" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
+          <SelectItem value="all">All</SelectItem>
           <SelectItem value="entry">Entry</SelectItem>
           <SelectItem value="mid">Mid</SelectItem>
           <SelectItem value="senior">Senior</SelectItem>
@@ -75,13 +75,13 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
         onValueChange={(value) => onFiltersChange({ ...filters, workModel: value })}
       >
         <SelectTrigger className="w-[150px] bg-background">
-          <SelectValue placeholder="Modelo" />
+          <SelectValue placeholder="Work Model" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="remote">Remoto</SelectItem>
-          <SelectItem value="hybrid">Híbrido</SelectItem>
-          <SelectItem value="onsite">Presencial</SelectItem>
+          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="remote">Remote</SelectItem>
+          <SelectItem value="hybrid">Hybrid</SelectItem>
+          <SelectItem value="onsite">On-site</SelectItem>
         </SelectContent>
       </Select>
 
@@ -92,10 +92,10 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
         >
           <SelectTrigger className="w-[150px] bg-background">
             <MapPin className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue placeholder="País" />
+            <SelectValue placeholder="Country" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">All</SelectItem>
             {countries.map((country) => {
               const info = getCountryInfo(country);
               return (
@@ -118,10 +118,10 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
         onValueChange={(value) => onFiltersChange({ ...filters, company: value })}
       >
         <SelectTrigger className="w-[180px] bg-background">
-          <SelectValue placeholder="Empresa" />
+          <SelectValue placeholder="Company" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
+          <SelectItem value="all">All</SelectItem>
           {companies.map((company) => (
             <SelectItem key={company} value={company}>
               {company}
@@ -140,7 +140,7 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
             <SelectValue placeholder="Tag" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="all">All</SelectItem>
             {tags.map((tag) => (
               <SelectItem key={tag} value={tag}>
                 {tag}
@@ -153,7 +153,7 @@ export const PipelineFilters = ({ companies, tags, countries, filters, onFilters
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
           <X className="h-4 w-4" />
-          Limpar
+          Clear
         </Button>
       )}
     </div>
