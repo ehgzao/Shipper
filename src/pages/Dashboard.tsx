@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 
 interface Profile {
   id: string;
@@ -27,6 +28,8 @@ const Dashboard = () => {
   const [showAlert, setShowAlert] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [presetCompanies, setPresetCompanies] = useState<PresetCompany[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,6 +47,7 @@ const Dashboard = () => {
 
       if (profileData) {
         setProfile(profileData);
+        setShowOnboarding(!profileData.onboarding_completed);
       }
 
       // Fetch preset companies
@@ -55,6 +59,8 @@ const Dashboard = () => {
       if (companiesData) {
         setPresetCompanies(companiesData);
       }
+      
+      setIsLoading(false);
     };
 
     fetchData();
@@ -73,6 +79,23 @@ const Dashboard = () => {
     if (!name) return "U";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setProfile(prev => prev ? { ...prev, onboarding_completed: true } : null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <Ship className="h-8 w-8 text-primary animate-pulse" />
+      </div>
+    );
+  }
+
+  if (showOnboarding && user) {
+    return <OnboardingFlow userId={user.id} onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">

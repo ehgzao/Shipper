@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Ship, Mail, Lock, User, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -154,7 +155,7 @@ const Signup = () => {
                   required
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Mínimo 8 caracteres, 1 maiúscula e 1 número</p>
+              <PasswordStrengthIndicator password={password} />
             </div>
 
             <div>
