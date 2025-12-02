@@ -1,13 +1,46 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, MapPin, Calendar, ExternalLink, GripVertical } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Opportunity } from "./OpportunityModal";
+
+// Flag images
+import flagBR from "@/assets/flags/br.png";
+import flagPT from "@/assets/flags/pt.png";
+import flagDE from "@/assets/flags/de.png";
+import flagES from "@/assets/flags/es.png";
+import flagIE from "@/assets/flags/ie.png";
+import flagNL from "@/assets/flags/nl.png";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
   onClick: () => void;
 }
+
+const FLAG_MAP: Record<string, { flag: string; name: string }> = {
+  brazil: { flag: flagBR, name: "Brasil" },
+  brasil: { flag: flagBR, name: "Brasil" },
+  portugal: { flag: flagPT, name: "Portugal" },
+  germany: { flag: flagDE, name: "Alemanha" },
+  alemanha: { flag: flagDE, name: "Alemanha" },
+  spain: { flag: flagES, name: "Espanha" },
+  espanha: { flag: flagES, name: "Espanha" },
+  ireland: { flag: flagIE, name: "Irlanda" },
+  irlanda: { flag: flagIE, name: "Irlanda" },
+  netherlands: { flag: flagNL, name: "Holanda" },
+  holanda: { flag: flagNL, name: "Holanda" },
+};
+
+const getCountryFlag = (location: string | null) => {
+  if (!location) return null;
+  const lowerLocation = location.toLowerCase();
+  for (const [key, value] of Object.entries(FLAG_MAP)) {
+    if (lowerLocation.includes(key)) {
+      return value;
+    }
+  }
+  return null;
+};
 
 const WORK_MODEL_LABELS: Record<string, string> = {
   remote: "Remoto",
@@ -99,7 +132,16 @@ export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) 
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
               {opportunity.location && (
                 <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
+                  {(() => {
+                    const countryInfo = getCountryFlag(opportunity.location);
+                    return countryInfo ? (
+                      <img 
+                        src={countryInfo.flag} 
+                        alt={countryInfo.name} 
+                        className="w-4 h-3 object-cover rounded-sm"
+                      />
+                    ) : null;
+                  })()}
                   <span className="truncate max-w-20">{opportunity.location}</span>
                 </div>
               )}
