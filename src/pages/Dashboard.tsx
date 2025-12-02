@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { OpportunityModal, type Opportunity } from "@/components/OpportunityModal";
+import { PipelineFilters } from "@/components/PipelineFilters";
+import { PresetCompaniesView } from "@/components/PresetCompaniesView";
 
 interface Profile {
   id: string;
@@ -44,9 +46,44 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all" });
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Get unique company names for filter
+  const companyNames = useMemo(() => {
+    return [...new Set(opportunities.map(o => o.company_name))].sort();
+  }, [opportunities]);
+
+  // Filter opportunities
+  const filteredOpportunities = useMemo(() => {
+    return opportunities.filter(o => {
+      if (filters.seniority !== "all" && o.seniority_level !== filters.seniority) return false;
+      if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
+      if (filters.company !== "all" && o.company_name !== filters.company) return false;
+      return true;
+    });
+  }, [opportunities, filters]);
+
+  const handleRestartOnboarding = async () => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({ onboarding_completed: false })
+      .eq("id", user.id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setShowOnboarding(true);
+    }
+  };
 
   const fetchData = async () => {
     if (!user) return;
@@ -177,6 +214,10 @@ const Dashboard = () => {
               <span className="font-semibold text-lg">Shipper</span>
             </Link>
             <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={handleRestartOnboarding} className="gap-1">
+                <RotateCcw className="h-4 w-4" />
+                <span className="hidden sm:inline">Refazer Onboarding</span>
+              </Button>
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/settings">
                   <Settings className="h-5 w-5" />
@@ -236,6 +277,10 @@ const Dashboard = () => {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="database" className="gap-2">
+                <Database className="h-4 w-4" />
+                Database
+              </TabsTrigger>
             </TabsList>
             <Button className="gap-2" onClick={handleNewOpportunity}>
               <Plus className="h-4 w-4" />
@@ -244,8 +289,13 @@ const Dashboard = () => {
           </div>
 
           <TabsContent value="pipeline" className="mt-0">
+            <PipelineFilters 
+              companies={companyNames}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
             <KanbanBoard 
-              opportunities={opportunities}
+              opportunities={filteredOpportunities}
               onOpportunityClick={handleOpportunityClick}
               onUpdate={fetchData}
             />
@@ -256,6 +306,16 @@ const Dashboard = () => {
               companies={targetCompanies} 
               onCreateOpportunity={handleCreateOpportunityFromCompany}
             />
+          </TabsContent>
+
+          <TabsContent value="database" className="mt-0">
+            {user && (
+              <PresetCompaniesView 
+                userId={user.id}
+                existingCompanyNames={targetCompanies.map(c => c.company_name)}
+                onCompanyAdded={fetchData}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </main>
