@@ -133,6 +133,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          country_work_preferences: Json | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -153,6 +154,7 @@ export type Database = {
           years_experience_total: number | null
         }
         Insert: {
+          country_work_preferences?: Json | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           years_experience_total?: number | null
         }
         Update: {
+          country_work_preferences?: Json | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
