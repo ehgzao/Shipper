@@ -11,6 +11,7 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { signUp, user } = useAuth();
@@ -29,6 +30,33 @@ const Signup = () => {
       toast({
         title: "Senha muito curta",
         description: "A senha deve ter pelo menos 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      toast({
+        title: "Senha fraca",
+        description: "A senha deve conter pelo menos uma letra maiúscula.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      toast({
+        title: "Senha fraca",
+        description: "A senha deve conter pelo menos um número.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "A senha e a confirmação devem ser iguais.",
         variant: "destructive",
       });
       return;
@@ -126,7 +154,24 @@ const Signup = () => {
                   required
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Mínimo de 8 caracteres</p>
+              <p className="mt-1 text-xs text-muted-foreground">Mínimo 8 caracteres, 1 maiúscula e 1 número</p>
+            </div>
+
+            <div>
+              <Label htmlFor="confirmPassword">Confirmar senha</Label>
+              <div className="mt-2 relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10"
+                  minLength={8}
+                  required
+                />
+              </div>
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
