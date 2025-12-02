@@ -8,6 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
+
+// Flag images
+import flagBR from "@/assets/flags/br.png";
+import flagPT from "@/assets/flags/pt.png";
+import flagDE from "@/assets/flags/de.png";
+import flagES from "@/assets/flags/es.png";
+import flagIE from "@/assets/flags/ie.png";
+import flagNL from "@/assets/flags/nl.png";
 import { OpportunityModal, type Opportunity } from "@/components/OpportunityModal";
 import { PipelineFilters } from "@/components/PipelineFilters";
 import { PresetCompaniesView } from "@/components/PresetCompaniesView";
@@ -386,6 +394,15 @@ interface CompaniesViewProps {
   targetRoles: string[];
 }
 
+const FLAG_IMAGES: Record<string, string> = {
+  BR: flagBR,
+  PT: flagPT,
+  DE: flagDE,
+  ES: flagES,
+  IE: flagIE,
+  NL: flagNL,
+};
+
 const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: CompaniesViewProps) => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const countryMap: Record<string, { name: string; code: string }> = {
@@ -467,16 +484,23 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
         </div>
       )}
 
-      {Object.entries(groupedCompanies).map(([country, countryCompanies]) => (
+      {Object.entries(groupedCompanies).map(([country, countryCompanies]) => {
+        const countryInfo = countryMap[country];
+        const countryCode = countryInfo?.code || country.toUpperCase().slice(0, 2);
+        return (
         <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-xs font-bold text-muted-foreground">
-                {countryMap[country]?.code || country.toUpperCase().slice(0, 2)}
-              </span>
-              {countryMap[country]?.name || country}
-              <span className="text-muted-foreground font-normal">
-                ({countryCompanies.length} empresas)
+              {FLAG_IMAGES[countryCode] && (
+                <img 
+                  src={FLAG_IMAGES[countryCode]} 
+                  alt={countryInfo?.name} 
+                  className="w-5 h-3.5 object-cover rounded-sm"
+                />
+              )}
+              {countryInfo?.name || country}
+              <span className="text-muted-foreground font-normal text-sm">
+                ({countryCompanies.length})
               </span>
             </h3>
           </div>
@@ -512,7 +536,8 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
