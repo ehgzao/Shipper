@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Trash2, Sparkles, Copy, X, Plus, Tag } from "lucide-react";
 import { AICoach } from "@/components/AICoach";
 import { Badge } from "@/components/ui/badge";
+import { opportunitySchema, getValidationError } from "@/lib/validations";
 
 const COMMON_TAGS = [
   "Product Manager",
@@ -189,10 +190,25 @@ export const OpportunityModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!companyName.trim() || !roleTitle.trim()) {
+    // Validate form data with zod
+    const formData = {
+      companyName: companyName.trim(),
+      roleTitle: roleTitle.trim(),
+      jobUrl: jobUrl.trim(),
+      location: location.trim(),
+      salaryRange: salaryRange.trim(),
+      contactName: contactName.trim(),
+      contactLinkedin: contactLinkedin.trim(),
+      nextAction: nextAction.trim(),
+      notes: notes.trim(),
+      tags,
+    };
+
+    const validationError = getValidationError(opportunitySchema, formData);
+    if (validationError) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Empresa e cargo são obrigatórios.",
+        title: "Erro de validação",
+        description: validationError,
         variant: "destructive",
       });
       return;
@@ -201,20 +217,20 @@ export const OpportunityModal = ({
     setIsLoading(true);
 
     const data = {
-      company_name: companyName.trim(),
-      role_title: roleTitle.trim(),
+      company_name: formData.companyName,
+      role_title: formData.roleTitle,
       status,
-      job_url: jobUrl.trim() || null,
-      location: location.trim() || null,
+      job_url: formData.jobUrl || null,
+      location: formData.location || null,
       work_model: workModel || null,
       seniority_level: seniorityLevel || null,
-      salary_range: salaryRange.trim() || null,
-      contact_name: contactName.trim() || null,
-      contact_linkedin: contactLinkedin.trim() || null,
-      next_action: nextAction.trim() || null,
+      salary_range: formData.salaryRange || null,
+      contact_name: formData.contactName || null,
+      contact_linkedin: formData.contactLinkedin || null,
+      next_action: formData.nextAction || null,
       next_action_date: nextActionDate || null,
-      notes: notes.trim() || null,
-      tags: tags.length > 0 ? tags : [],
+      notes: formData.notes || null,
+      tags: formData.tags.length > 0 ? formData.tags : [],
       user_id: userId,
     };
 
