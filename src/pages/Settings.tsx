@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { profileSettingsSchema, passwordChangeSchema, getValidationError } from "@/lib/validations";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -170,20 +171,39 @@ const Settings = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    // Validate profile data with zod
+    const formData = {
+      fullName: fullName.trim(),
+      yearsTotal,
+      yearsProduct,
+      targetRoles,
+    };
+
+    const validationError = getValidationError(profileSettingsSchema, formData);
+    if (validationError) {
+      toast({
+        title: "Erro de validação",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     const { error } = await supabase
       .from("profiles")
       .update({
-        full_name: fullName.trim(),
-        years_experience_total: yearsTotal,
-        years_experience_product: yearsProduct,
+        full_name: formData.fullName || null,
+        years_experience_total: formData.yearsTotal,
+        years_experience_product: formData.yearsProduct,
         previous_background: background || null,
         strength_orientation: strength || null,
         preferred_countries: selectedCountries,
         country_work_preferences: countryWorkPrefs,
         preferred_company_stage: companyStages,
-        target_roles: targetRoles,
+        target_roles: formData.targetRoles,
       })
       .eq("id", user.id);
 
@@ -203,19 +223,16 @@ const Settings = () => {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Senhas não conferem",
-        description: "A nova senha e a confirmação devem ser iguais.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate password with zod
+    const validationError = getValidationError(passwordChangeSchema, {
+      newPassword,
+      confirmPassword,
+    });
 
-    if (newPassword.length < 6) {
+    if (validationError) {
       toast({
-        title: "Senha muito curta",
-        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        title: "Erro de validação",
+        description: validationError,
         variant: "destructive",
       });
       return;
