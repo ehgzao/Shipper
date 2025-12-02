@@ -14,7 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      opportunities: {
+        Row: {
+          applied_at: string | null
+          company_name: string
+          contact_linkedin: string | null
+          contact_name: string | null
+          created_at: string | null
+          id: string
+          job_url: string | null
+          location: string | null
+          match_breakdown: Json | null
+          match_score: number | null
+          next_action: string | null
+          next_action_date: string | null
+          notes: string | null
+          required_skills: string[] | null
+          required_years_experience: number | null
+          role_title: string
+          salary_range: string | null
+          seniority_level: Database["public"]["Enums"]["seniority_level"] | null
+          status: Database["public"]["Enums"]["opportunity_status"] | null
+          target_company_id: string | null
+          updated_at: string | null
+          user_id: string
+          work_model: Database["public"]["Enums"]["work_model"] | null
+        }
+        Insert: {
+          applied_at?: string | null
+          company_name: string
+          contact_linkedin?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          job_url?: string | null
+          location?: string | null
+          match_breakdown?: Json | null
+          match_score?: number | null
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          required_skills?: string[] | null
+          required_years_experience?: number | null
+          role_title: string
+          salary_range?: string | null
+          seniority_level?:
+            | Database["public"]["Enums"]["seniority_level"]
+            | null
+          status?: Database["public"]["Enums"]["opportunity_status"] | null
+          target_company_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          work_model?: Database["public"]["Enums"]["work_model"] | null
+        }
+        Update: {
+          applied_at?: string | null
+          company_name?: string
+          contact_linkedin?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          job_url?: string | null
+          location?: string | null
+          match_breakdown?: Json | null
+          match_score?: number | null
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          required_skills?: string[] | null
+          required_years_experience?: number | null
+          role_title?: string
+          salary_range?: string | null
+          seniority_level?:
+            | Database["public"]["Enums"]["seniority_level"]
+            | null
+          status?: Database["public"]["Enums"]["opportunity_status"] | null
+          target_company_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          work_model?: Database["public"]["Enums"]["work_model"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "target_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preset_companies: {
+        Row: {
+          careers_url: string | null
+          company_name: string
+          company_type: Database["public"]["Enums"]["company_type"] | null
+          country: string
+          id: string
+          sector: string | null
+        }
+        Insert: {
+          careers_url?: string | null
+          company_name: string
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          country: string
+          id?: string
+          sector?: string | null
+        }
+        Update: {
+          careers_url?: string | null
+          company_name?: string
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          country?: string
+          id?: string
+          sector?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          industry_experience: string[] | null
+          onboarding_completed: boolean | null
+          preferred_company_stage: string[] | null
+          preferred_countries: string[] | null
+          previous_background: Database["public"]["Enums"]["app_role"] | null
+          skills: string[] | null
+          strength_orientation:
+            | Database["public"]["Enums"]["strength_orientation"]
+            | null
+          target_roles: string[] | null
+          updated_at: string | null
+          verification_frequency_days: number | null
+          years_experience_product: number | null
+          years_experience_total: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          industry_experience?: string[] | null
+          onboarding_completed?: boolean | null
+          preferred_company_stage?: string[] | null
+          preferred_countries?: string[] | null
+          previous_background?: Database["public"]["Enums"]["app_role"] | null
+          skills?: string[] | null
+          strength_orientation?:
+            | Database["public"]["Enums"]["strength_orientation"]
+            | null
+          target_roles?: string[] | null
+          updated_at?: string | null
+          verification_frequency_days?: number | null
+          years_experience_product?: number | null
+          years_experience_total?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          industry_experience?: string[] | null
+          onboarding_completed?: boolean | null
+          preferred_company_stage?: string[] | null
+          preferred_countries?: string[] | null
+          previous_background?: Database["public"]["Enums"]["app_role"] | null
+          skills?: string[] | null
+          strength_orientation?:
+            | Database["public"]["Enums"]["strength_orientation"]
+            | null
+          target_roles?: string[] | null
+          updated_at?: string | null
+          verification_frequency_days?: number | null
+          years_experience_product?: number | null
+          years_experience_total?: number | null
+        }
+        Relationships: []
+      }
+      target_companies: {
+        Row: {
+          careers_url: string | null
+          company_name: string
+          company_type: Database["public"]["Enums"]["company_type"] | null
+          country: string
+          created_at: string | null
+          id: string
+          is_preset: boolean | null
+          last_checked_at: string | null
+          notes: string | null
+          sector: string | null
+          user_id: string
+        }
+        Insert: {
+          careers_url?: string | null
+          company_name: string
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          country: string
+          created_at?: string | null
+          id?: string
+          is_preset?: boolean | null
+          last_checked_at?: string | null
+          notes?: string | null
+          sector?: string | null
+          user_id: string
+        }
+        Update: {
+          careers_url?: string | null
+          company_name?: string
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          country?: string
+          created_at?: string | null
+          id?: string
+          is_preset?: boolean | null
+          last_checked_at?: string | null
+          notes?: string | null
+          sector?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +244,33 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "sales"
+        | "engineering"
+        | "design"
+        | "operations"
+        | "marketing"
+        | "consulting"
+        | "other"
+      company_type: "tech_giant" | "scaleup" | "startup"
+      opportunity_status:
+        | "researching"
+        | "applied"
+        | "interviewing"
+        | "offer"
+        | "rejected"
+        | "ghosted"
+        | "withdrawn"
+      seniority_level:
+        | "entry"
+        | "mid"
+        | "senior"
+        | "lead"
+        | "principal"
+        | "director"
+        | "vp"
+      strength_orientation: "technical" | "business" | "balanced"
+      work_model: "remote" | "hybrid" | "onsite"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +397,37 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "sales",
+        "engineering",
+        "design",
+        "operations",
+        "marketing",
+        "consulting",
+        "other",
+      ],
+      company_type: ["tech_giant", "scaleup", "startup"],
+      opportunity_status: [
+        "researching",
+        "applied",
+        "interviewing",
+        "offer",
+        "rejected",
+        "ghosted",
+        "withdrawn",
+      ],
+      seniority_level: [
+        "entry",
+        "mid",
+        "senior",
+        "lead",
+        "principal",
+        "director",
+        "vp",
+      ],
+      strength_orientation: ["technical", "business", "balanced"],
+      work_model: ["remote", "hybrid", "onsite"],
+    },
   },
 } as const
