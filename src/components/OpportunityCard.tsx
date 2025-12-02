@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, X, Snowflake } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, X, Snowflake, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,9 @@ interface OpportunityCardProps {
   onUpdateRole?: (id: string, role: string) => void;
   onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
@@ -118,6 +122,42 @@ const getSmartTagSuggestions = (opportunity: Opportunity): string[] => {
   return suggestions;
 };
 
+// Smart role suggestions based on company and context
+const getSmartRoleSuggestions = (companyName: string): string[] => {
+  const companyLower = companyName.toLowerCase();
+  const suggestions: string[] = [];
+  
+  // Common PM roles
+  suggestions.push(
+    "Product Manager",
+    "Senior Product Manager",
+    "Lead Product Manager",
+    "Principal Product Manager",
+    "Group Product Manager",
+    "Director of Product",
+    "VP of Product"
+  );
+  
+  // Specialized roles
+  suggestions.push(
+    "Technical Product Manager",
+    "Growth Product Manager",
+    "Platform Product Manager",
+    "Data Product Manager",
+    "AI/ML Product Manager",
+    "Mobile Product Manager",
+    "B2B Product Manager",
+    "B2C Product Manager"
+  );
+  
+  // Company-specific suggestions
+  if (companyLower.includes("google") || companyLower.includes("meta") || companyLower.includes("amazon") || companyLower.includes("microsoft") || companyLower.includes("apple")) {
+    suggestions.unshift("Staff Product Manager");
+  }
+  
+  return suggestions;
+};
+
 export const OpportunityCard = ({ 
   opportunity, 
   onClick, 
@@ -126,7 +166,10 @@ export const OpportunityCard = ({
   onUpdateTags,
   onUpdateRole,
   onFreeze,
-  allTags = []
+  allTags = [],
+  isSelected = false,
+  onSelect,
+  selectionMode = false
 }: OpportunityCardProps) => {
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState("");
@@ -135,11 +178,15 @@ export const OpportunityCard = ({
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [editedRole, setEditedRole] = useState(opportunity.role_title);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
 
   // Sync editedRole when opportunity changes
   useEffect(() => {
     setEditedRole(opportunity.role_title);
   }, [opportunity.role_title]);
+
+  // Get smart role suggestions
+  const roleSuggestions = getSmartRoleSuggestions(opportunity.company_name);
 
   const isFrozen = opportunity.tags?.includes(FROZEN_TAG) || false;
 
@@ -230,9 +277,23 @@ export const OpportunityCard = ({
         {...listeners}
         className={`bg-card border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
           isDragging ? "opacity-50 shadow-lg" : ""
-        } ${isFrozen ? "border-blue-400 bg-blue-50/50 dark:bg-blue-950/20" : "border-border"}`}
+        } ${isFrozen ? "border-blue-400 bg-blue-50/50 dark:bg-blue-950/20" : "border-border"} ${isSelected ? "ring-2 ring-primary" : ""}`}
       >
         <div className="flex items-start gap-2">
+          {/* Selection checkbox */}
+          {(selectionMode || isSelected) && onSelect && (
+            <div 
+              className="flex-shrink-0 pt-0.5"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(checked) => onSelect(opportunity.id, !!checked)}
+              />
+            </div>
+          )}
+          
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -240,15 +301,58 @@ export const OpportunityCard = ({
                 <div className="flex items-center gap-1 text-muted-foreground text-xs mt-0.5">
                   <Briefcase className="h-3 w-3 flex-shrink-0" />
                   {isEditingRole ? (
-                    <Input
-                      value={editedRole}
-                      onChange={(e) => setEditedRole(e.target.value)}
-                      onKeyDown={handleRoleSubmit}
-                      onBlur={handleRoleBlur}
-                      className="h-5 text-xs px-1 py-0"
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div className="relative flex-1">
+                      <Input
+                        value={editedRole}
+                        onChange={(e) => {
+                          setEditedRole(e.target.value);
+                          setShowRoleSuggestions(true);
+                        }}
+                        onKeyDown={(e) => {
+                          handleRoleSubmit(e);
+                          if (e.key === "Escape") setShowRoleSuggestions(false);
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            handleRoleBlur();
+                            setShowRoleSuggestions(false);
+                          }, 150);
+                        }}
+                        onFocus={() => setShowRoleSuggestions(true)}
+                        className="h-5 text-xs px-1 py-0"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {/* Role suggestions dropdown */}
+                      {showRoleSuggestions && (
+                        <div className="absolute top-6 left-0 z-50 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto min-w-[200px]">
+                          {roleSuggestions
+                            .filter(role => 
+                              editedRole === "" || role.toLowerCase().includes(editedRole.toLowerCase())
+                            )
+                            .slice(0, 10)
+                            .map(role => (
+                              <button
+                                key={role}
+                                className="w-full px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors flex items-center gap-1"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (onUpdateRole) {
+                                    onUpdateRole(opportunity.id, role);
+                                  }
+                                  setEditedRole(role);
+                                  setIsEditingRole(false);
+                                  setShowRoleSuggestions(false);
+                                }}
+                              >
+                                <Briefcase className="h-3 w-3 text-muted-foreground" />
+                                {role}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <span 
                       className="truncate cursor-pointer hover:text-foreground"
