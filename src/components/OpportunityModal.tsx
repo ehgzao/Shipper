@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2 } from "lucide-react";
+import { Trash2, Sparkles } from "lucide-react";
+import { AICoach } from "@/components/AICoach";
 import type { Database } from "@/integrations/supabase/types";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
@@ -37,6 +38,15 @@ export interface Opportunity {
   applied_at: string | null;
 }
 
+export interface OpportunityProfile {
+  full_name: string | null;
+  years_experience_total: number | null;
+  years_experience_product: number | null;
+  previous_background: string | null;
+  strength_orientation: string | null;
+  skills: string[] | null;
+}
+
 interface OpportunityModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +54,7 @@ interface OpportunityModalProps {
   userId: string;
   onSaved: () => void;
   onDeleted?: () => void;
+  profile?: OpportunityProfile | null;
 }
 
 const SENIORITY_OPTIONS: { value: SeniorityLevel; label: string }[] = [
@@ -78,10 +89,12 @@ export const OpportunityModal = ({
   opportunity, 
   userId, 
   onSaved,
-  onDeleted 
+  onDeleted,
+  profile 
 }: OpportunityModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAICoach, setShowAICoach] = useState(false);
   const { toast } = useToast();
   
   // Form state
@@ -228,23 +241,36 @@ export const OpportunityModal = ({
   const isEditing = !!opportunity;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>
+              {isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}
+            </DialogTitle>
+            {isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setShowAICoach(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Coach
+              </Button>
+            )}
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Empresa *</Label>
-              <Input
-                id="companyName"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Info */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Empresa *</Label>
+                <Input
+                  id="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Nome da empresa"
                 required
               />
@@ -433,5 +459,16 @@ export const OpportunityModal = ({
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* AI Coach Modal */}
+    {opportunity && (
+      <AICoach
+        open={showAICoach}
+        onOpenChange={setShowAICoach}
+        opportunity={opportunity}
+        profile={profile || null}
+      />
+    )}
+  </>
   );
 };
