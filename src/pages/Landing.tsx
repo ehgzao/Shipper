@@ -2,6 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Ship, Target, BarChart3, Sparkles, Check, ArrowRight, Users, Globe, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import featureTargetList from "@/assets/feature-target-list.png";
+import featurePipeline from "@/assets/feature-pipeline.png";
+import featureMatchScore from "@/assets/feature-match-score.png";
+import featureAiCoach from "@/assets/feature-ai-coach.png";
+
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -87,10 +92,10 @@ const Landing = () => {
           </p>
           <div className="space-y-16">
             {[
-              { icon: Target, title: "Curated Target List", desc: "Build your dream list, not a spray list. Start with 60 pre-selected companies across 6 countries (Portugal, Brazil, Germany, Spain, Ireland, Netherlands) or add your own." },
-              { icon: BarChart3, title: "Smart Pipeline", desc: "Track with intention, not anxiety. A clean Kanban board to track your applications from research to offer." },
-              { icon: Crosshair, title: "Match Scoring", desc: "Know your fit before you apply. Our matching system analyzes your profile against each role—skills, seniority, experience." },
-              { icon: Sparkles, title: "AI Coach", desc: "Suggestions, not substitutions. Get personalized tips for each application. You stay authentic." },
+              { icon: Target, title: "Curated Target List", desc: "Build your dream list, not a spray list. Start with 60 pre-selected companies across 6 countries (Portugal, Brazil, Germany, Spain, Ireland, Netherlands) or add your own.", image: featureTargetList },
+              { icon: BarChart3, title: "Smart Pipeline", desc: "Track with intention, not anxiety. A clean Kanban board to track your applications from research to offer.", image: featurePipeline },
+              { icon: Crosshair, title: "Match Scoring", desc: "Know your fit before you apply. Our matching system analyzes your profile against each role—skills, seniority, experience.", image: featureMatchScore },
+              { icon: Sparkles, title: "AI Coach", desc: "Suggestions, not substitutions. Get personalized tips for each application. You stay authentic.", image: featureAiCoach },
             ].map((item, i) => (
               <div key={i} className={`flex flex-col md:flex-row gap-8 items-center ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
                 <div className="flex-1 animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
@@ -101,8 +106,12 @@ const Landing = () => {
                   <p className="text-muted-foreground">{item.desc}</p>
                 </div>
                 <div className="flex-1">
-                  <div className="bg-muted/50 rounded-xl aspect-video flex items-center justify-center border border-border/50">
-                    <item.icon className="h-16 w-16 text-muted-foreground/30" />
+                  <div className="rounded-xl overflow-hidden shadow-lg border border-border/50">
+                    <img 
+                      src={item.image} 
+                      alt={item.title}
+                      className="w-full h-auto object-cover"
+                    />
                   </div>
                 </div>
               </div>
