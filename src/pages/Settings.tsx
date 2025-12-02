@@ -5,12 +5,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon } from "lucide-react";
+import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+
+// Flag images
+import flagBR from "@/assets/flags/br.png";
+import flagPT from "@/assets/flags/pt.png";
+import flagDE from "@/assets/flags/de.png";
+import flagES from "@/assets/flags/es.png";
+import flagIE from "@/assets/flags/ie.png";
+import flagNL from "@/assets/flags/nl.png";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type StrengthOrientation = Database["public"]["Enums"]["strength_orientation"];
@@ -26,7 +34,17 @@ interface Profile {
   preferred_countries: string[] | null;
   preferred_company_stage: string[] | null;
   country_work_preferences: Record<string, string[]> | null;
+  target_roles: string[] | null;
 }
+
+const FLAG_IMAGES: Record<string, string> = {
+  BR: flagBR,
+  PT: flagPT,
+  DE: flagDE,
+  ES: flagES,
+  IE: flagIE,
+  NL: flagNL,
+};
 
 const COUNTRIES = [
   { id: "portugal", name: "Portugal", code: "PT" },
@@ -35,6 +53,19 @@ const COUNTRIES = [
   { id: "spain", name: "Espanha", code: "ES" },
   { id: "ireland", name: "Irlanda", code: "IE" },
   { id: "netherlands", name: "Holanda", code: "NL" },
+];
+
+const COMMON_ROLES = [
+  "Product Manager",
+  "Senior Product Manager",
+  "Lead Product Manager",
+  "Principal Product Manager",
+  "Associate Product Manager",
+  "Technical Product Manager",
+  "Growth Product Manager",
+  "Head of Product",
+  "Product Design Manager",
+  "Platform Product Manager",
 ];
 
 const WORK_MODELS = ["remote", "hybrid", "onsite"];
@@ -70,6 +101,8 @@ const Settings = () => {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [countryWorkPrefs, setCountryWorkPrefs] = useState<Record<string, string[]>>({});
   const [companyStages, setCompanyStages] = useState<string[]>([]);
+  const [targetRoles, setTargetRoles] = useState<string[]>([]);
+  const [newRole, setNewRole] = useState("");
   
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -101,6 +134,7 @@ const Settings = () => {
         setSelectedCountries(data.preferred_countries || []);
         setCountryWorkPrefs((data.country_work_preferences as Record<string, string[]>) || {});
         setCompanyStages(data.preferred_company_stage || []);
+        setTargetRoles(data.target_roles || []);
       }
       setIsLoading(false);
     };
@@ -123,6 +157,7 @@ const Settings = () => {
         preferred_countries: selectedCountries,
         country_work_preferences: countryWorkPrefs,
         preferred_company_stage: companyStages,
+        target_roles: targetRoles,
       })
       .eq("id", user.id);
 
@@ -371,7 +406,11 @@ const Settings = () => {
                         checked={selectedCountries.includes(country.id)}
                         onCheckedChange={() => toggleCountry(country.id)}
                       />
-                      <span className="text-xs font-bold text-muted-foreground">{country.code}</span>
+                      <img 
+                        src={FLAG_IMAGES[country.code]} 
+                        alt={country.name} 
+                        className="w-5 h-3.5 object-cover rounded-sm"
+                      />
                       <span className="font-medium text-sm">{country.name}</span>
                     </div>
                     {selectedCountries.includes(country.id) && (
@@ -424,6 +463,85 @@ const Settings = () => {
                     {stage.label}
                   </button>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Target Roles Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Cargos Alvo
+              </CardTitle>
+              <CardDescription>
+                Cargos que você está buscando
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current roles */}
+              {targetRoles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {targetRoles.map((role) => (
+                    <span
+                      key={role}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                    >
+                      {role}
+                      <button
+                        onClick={() => setTargetRoles(targetRoles.filter(r => r !== role))}
+                        className="hover:bg-primary/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new role */}
+              <div className="flex gap-2">
+                <Input
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  placeholder="Adicionar cargo..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newRole.trim()) {
+                      if (!targetRoles.includes(newRole.trim())) {
+                        setTargetRoles([...targetRoles, newRole.trim()]);
+                      }
+                      setNewRole("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (newRole.trim() && !targetRoles.includes(newRole.trim())) {
+                      setTargetRoles([...targetRoles, newRole.trim()]);
+                      setNewRole("");
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Suggestions */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Sugestões:</p>
+                <div className="flex flex-wrap gap-1">
+                  {COMMON_ROLES.filter(r => !targetRoles.includes(r)).slice(0, 6).map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setTargetRoles([...targetRoles, role])}
+                      className="px-2 py-1 text-xs border border-border rounded-full hover:bg-muted transition-colors"
+                    >
+                      + {role}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
