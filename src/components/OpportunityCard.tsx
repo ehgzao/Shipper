@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, Plus, X } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, Plus, X, Snowflake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import type { Opportunity } from "./OpportunityModal";
 
+const FROZEN_TAG = "🧊 VAGA CONGELADA";
+
 // Flag images
 import flagBR from "@/assets/flags/br.png";
 import flagPT from "@/assets/flags/pt.png";
@@ -39,6 +41,7 @@ interface OpportunityCardProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
 }
 
@@ -94,6 +97,7 @@ export const OpportunityCard = ({
   onDuplicate,
   onUpdateTags,
   onUpdateRole,
+  onFreeze,
   allTags = []
 }: OpportunityCardProps) => {
   const [showTagInput, setShowTagInput] = useState(false);
@@ -103,6 +107,8 @@ export const OpportunityCard = ({
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [editedRole, setEditedRole] = useState(opportunity.role_title);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isFrozen = opportunity.tags?.includes(FROZEN_TAG) || false;
 
   const {
     attributes,
@@ -178,9 +184,9 @@ export const OpportunityCard = ({
         style={style}
         {...attributes}
         {...listeners}
-        className={`bg-card border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
+        className={`bg-card border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
           isDragging ? "opacity-50 shadow-lg" : ""
-        }`}
+        } ${isFrozen ? "border-blue-400 bg-blue-50/50 dark:bg-blue-950/20" : "border-border"}`}
       >
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
@@ -256,6 +262,18 @@ export const OpportunityCard = ({
                         Duplicar
                       </DropdownMenuItem>
                     )}
+                    {onFreeze && (
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFreeze(opportunity.id, !isFrozen);
+                        }}
+                        className="text-blue-500 focus:text-blue-500"
+                      >
+                        <Snowflake className="h-4 w-4 mr-2" />
+                        {isFrozen ? "Descongelar Vaga" : "🧊 Congelar Vaga"}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     {onDelete && (
                       <DropdownMenuItem 
@@ -275,6 +293,11 @@ export const OpportunityCard = ({
             </div>
 
             <div className="flex flex-wrap gap-1 mt-2">
+              {isFrozen && (
+                <Badge className="text-xs bg-blue-100 text-blue-600 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400">
+                  🧊 VAGA CONGELADA
+                </Badge>
+              )}
               {opportunity.seniority_level && (
                 <Badge variant="secondary" className="text-xs">
                   {SENIORITY_LABELS[opportunity.seniority_level] || opportunity.seniority_level}
@@ -285,7 +308,7 @@ export const OpportunityCard = ({
                   {WORK_MODEL_LABELS[opportunity.work_model] || opportunity.work_model}
                 </Badge>
               )}
-              {opportunity.tags && opportunity.tags.slice(0, 2).map((tag, index) => (
+              {opportunity.tags && opportunity.tags.filter(t => t !== FROZEN_TAG).slice(0, 2).map((tag, index) => (
                 editingTagIndex === index ? (
                   <Input
                     key={`edit-${index}`}
