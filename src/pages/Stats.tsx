@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ship, ArrowLeft, Briefcase, MapPin, TrendingUp, Target, CheckCircle, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Ship, ArrowLeft, Briefcase, MapPin, TrendingUp, Target, CheckCircle, Clock, Calendar } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { subDays, subMonths, isAfter, parseISO } from "date-fns";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -21,6 +23,7 @@ interface Opportunity {
   role_title: string;
   status: string;
   location: string | null;
+  created_at: string | null;
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
@@ -57,6 +60,16 @@ const STATUS_LABELS: Record<string, string> = {
   withdrawn: "Desistiu",
 };
 
+type TimePeriod = "all" | "week" | "month" | "3months" | "6months";
+
+const TIME_PERIOD_OPTIONS: { value: TimePeriod; label: string }[] = [
+  { value: "all", label: "Todo período" },
+  { value: "week", label: "Última semana" },
+  { value: "month", label: "Último mês" },
+  { value: "3months", label: "Últimos 3 meses" },
+  { value: "6months", label: "Últimos 6 meses" },
+];
+
 const normalizeCountry = (location: string | null): string => {
   if (!location) return "Outros";
   const lower = location.toLowerCase();
@@ -66,9 +79,21 @@ const normalizeCountry = (location: string | null): string => {
   return "Outros";
 };
 
+const getDateThreshold = (period: TimePeriod): Date | null => {
+  const now = new Date();
+  switch (period) {
+    case "week": return subDays(now, 7);
+    case "month": return subMonths(now, 1);
+    case "3months": return subMonths(now, 3);
+    case "6months": return subMonths(now, 6);
+    default: return null;
+  }
+};
+
 const Stats = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("all");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -78,7 +103,7 @@ const Stats = () => {
 
       const { data } = await supabase
         .from("opportunities")
-        .select("id, company_name, role_title, status, location")
+        .select("id, company_name, role_title, status, location, created_at")
         .eq("user_id", user.id);
 
       if (data) setOpportunities(data);
@@ -88,34 +113,45 @@ const Stats = () => {
     fetchData();
   }, [user]);
 
+  // Filter opportunities by time period
+  const filteredOpportunities = useMemo(() => {
+    const threshold = getDateThreshold(timePeriod);
+    if (!threshold) return opportunities;
+    
+    return opportunities.filter(o => {
+      if (!o.created_at) return false;
+      return isAfter(parseISO(o.created_at), threshold);
+    });
+  }, [opportunities, timePeriod]);
+
   // Stats by role
   const roleStats = useMemo(() => {
     const counts: Record<string, number> = {};
-    opportunities.forEach(o => {
+    filteredOpportunities.forEach(o => {
       counts[o.role_title] = (counts[o.role_title] || 0) + 1;
     });
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [opportunities]);
+  }, [filteredOpportunities]);
 
   // Stats by country
   const countryStats = useMemo(() => {
     const counts: Record<string, number> = {};
-    opportunities.forEach(o => {
+    filteredOpportunities.forEach(o => {
       const country = normalizeCountry(o.location);
       counts[country] = (counts[country] || 0) + 1;
     });
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [opportunities]);
+  }, [filteredOpportunities]);
 
   // Stats by status
   const statusStats = useMemo(() => {
     const counts: Record<string, number> = {};
-    opportunities.forEach(o => {
+    filteredOpportunities.forEach(o => {
       const status = o.status || "researching";
       counts[status] = (counts[status] || 0) + 1;
     });
@@ -125,16 +161,16 @@ const Stats = () => {
         value,
         fill: STATUS_COLORS[name] || "#6b7280"
       }));
-  }, [opportunities]);
+  }, [filteredOpportunities]);
 
   // Summary stats
   const summaryStats = useMemo(() => {
-    const total = opportunities.length;
-    const applied = opportunities.filter(o => o.status !== "researching").length;
-    const interviewing = opportunities.filter(o => o.status === "interviewing").length;
-    const offers = opportunities.filter(o => o.status === "offer").length;
+    const total = filteredOpportunities.length;
+    const applied = filteredOpportunities.filter(o => o.status !== "researching").length;
+    const interviewing = filteredOpportunities.filter(o => o.status === "interviewing").length;
+    const offers = filteredOpportunities.filter(o => o.status === "offer").length;
     return { total, applied, interviewing, offers };
-  }, [opportunities]);
+  }, [filteredOpportunities]);
 
   if (isLoading) {
     return (
@@ -159,10 +195,25 @@ const Stats = () => {
                 <span className="font-semibold text-lg">Shipper</span>
               </Link>
             </div>
-            <h1 className="text-lg font-medium flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Estatísticas
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-medium flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Estatísticas
+              </h1>
+              <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
+                <SelectTrigger className="w-[160px] h-8 text-sm">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_PERIOD_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </header>
@@ -289,7 +340,7 @@ const Stats = () => {
                     <div className="space-y-3">
                       {countryStats.map((item) => {
                         const flagInfo = Object.values(FLAG_MAP).find(f => f.name === item.name);
-                        const percentage = Math.round((item.value / opportunities.length) * 100);
+                        const percentage = Math.round((item.value / filteredOpportunities.length) * 100);
                         return (
                           <div key={item.name} className="flex items-center gap-3">
                             {flagInfo ? (

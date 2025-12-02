@@ -187,27 +187,41 @@ const KanbanColumn = ({ column, opportunities, onOpportunityClick, isDragging }:
     id: column.id,
   });
 
-  // Trash column styling
+  // Trash column styling with enhanced animation
   if (column.isTrash) {
     return (
       <div 
         ref={setNodeRef}
-        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all ${
+        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-300 ${
           isOver 
-            ? "border-destructive bg-destructive/10" 
+            ? "border-destructive bg-destructive/20 scale-105 shadow-lg shadow-destructive/20" 
             : isDragging 
-              ? "border-destructive/50 bg-destructive/5" 
+              ? "border-destructive/50 bg-destructive/5 animate-pulse" 
               : "border-border"
         }`}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Trash2 className={`h-5 w-5 ${isOver ? "text-destructive" : "text-muted-foreground"}`} />
-          <h3 className={`font-medium ${isOver ? "text-destructive" : ""}`}>{column.title}</h3>
+          <Trash2 className={`h-5 w-5 transition-all duration-300 ${
+            isOver ? "text-destructive scale-125 animate-bounce" : "text-muted-foreground"
+          }`} />
+          <h3 className={`font-medium transition-colors duration-300 ${isOver ? "text-destructive" : ""}`}>
+            {column.title}
+          </h3>
         </div>
-        <div className={`text-center py-8 text-sm transition-colors ${
-          isOver ? "text-destructive" : "text-muted-foreground"
+        <div className={`flex flex-col items-center justify-center py-8 text-sm transition-all duration-300 ${
+          isOver ? "text-destructive scale-110" : "text-muted-foreground"
         }`}>
-          <p>Arraste para excluir</p>
+          <Trash2 className={`h-12 w-12 mb-2 transition-all duration-300 ${
+            isOver ? "text-destructive animate-bounce" : "text-muted-foreground/30"
+          }`} />
+          <p className="font-medium">
+            {isOver ? "Solte para excluir!" : "Arraste para excluir"}
+          </p>
+          {isOver && (
+            <p className="text-xs mt-1 animate-pulse">
+              ⚠️ Esta ação não pode ser desfeita
+            </p>
+          )}
         </div>
       </div>
     );

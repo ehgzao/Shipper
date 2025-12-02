@@ -35,6 +35,7 @@ export type Database = {
           salary_range: string | null
           seniority_level: Database["public"]["Enums"]["seniority_level"] | null
           status: Database["public"]["Enums"]["opportunity_status"] | null
+          tags: string[] | null
           target_company_id: string | null
           updated_at: string | null
           user_id: string
@@ -62,6 +63,7 @@ export type Database = {
             | Database["public"]["Enums"]["seniority_level"]
             | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
+          tags?: string[] | null
           target_company_id?: string | null
           updated_at?: string | null
           user_id: string
@@ -89,6 +91,7 @@ export type Database = {
             | Database["public"]["Enums"]["seniority_level"]
             | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
+          tags?: string[] | null
           target_company_id?: string | null
           updated_at?: string | null
           user_id?: string
