@@ -11,7 +11,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter, Trash2, CheckSquare } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,15 +56,6 @@ interface Profile {
   target_roles: string[] | null;
 }
 
-interface PresetCompany {
-  id: string;
-  company_name: string;
-  company_type: string | null;
-  country: string;
-  sector: string | null;
-  careers_url: string | null;
-}
-
 interface TargetCompany {
   id: string;
   company_name: string;
@@ -81,6 +79,7 @@ const Dashboard = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -94,7 +93,7 @@ const Dashboard = () => {
   const allTags = useMemo(() => {
     const tags = new Set<string>();
     opportunities.forEach(o => {
-      if (o.tags) o.tags.forEach(tag => tags.add(tag));
+      if (o.opportunity_tag) tags.add(o.opportunity_tag);
     });
     return [...tags].sort();
   }, [opportunities]);
@@ -114,15 +113,14 @@ const Dashboard = () => {
       if (filters.seniority !== "all" && o.seniority_level !== filters.seniority) return false;
       if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
       if (filters.company !== "all" && o.company_name !== filters.company) return false;
-      if (filters.tag !== "all" && (!o.tags || !o.tags.includes(filters.tag))) return false;
+      if (filters.tag !== "all" && o.opportunity_tag !== filters.tag) return false;
       if (filters.country !== "all" && o.location?.toLowerCase() !== filters.country) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
           o.company_name.toLowerCase().includes(query) ||
           o.role_title.toLowerCase().includes(query) ||
-          o.location?.toLowerCase().includes(query) ||
-          o.tags?.some(tag => tag.toLowerCase().includes(query));
+          o.location?.toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
       return true;
@@ -142,7 +140,6 @@ const Dashboard = () => {
   const fetchData = async () => {
     if (!user) return;
 
-    // Fetch profile
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
@@ -154,7 +151,6 @@ const Dashboard = () => {
       setShowOnboarding(!profileData.onboarding_completed);
     }
 
-    // Fetch target companies (user's companies)
     const { data: companiesData } = await supabase
       .from("target_companies")
       .select("*")
@@ -165,7 +161,6 @@ const Dashboard = () => {
       setTargetCompanies(companiesData);
     }
 
-    // Fetch opportunities
     const { data: opportunitiesData } = await supabase
       .from("opportunities")
       .select("*")
@@ -200,7 +195,7 @@ const Dashboard = () => {
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
     setProfile(prev => prev ? { ...prev, onboarding_completed: true } : null);
-    fetchData(); // Refresh data after onboarding
+    fetchData();
   };
 
   const handleOpportunityClick = (opportunity: Opportunity) => {
@@ -251,9 +246,10 @@ const Dashboard = () => {
         location: opportunity.location,
         seniority_level: opportunity.seniority_level,
         work_model: opportunity.work_model,
-        tags: opportunity.tags,
         job_url: opportunity.job_url,
         salary_range: opportunity.salary_range,
+        fit_level: opportunity.fit_level,
+        opportunity_tag: opportunity.opportunity_tag,
       });
 
     if (error) {
@@ -266,79 +262,6 @@ const Dashboard = () => {
       toast({
         title: "Opportunity duplicated",
         description: `Copy of ${opportunity.company_name} created.`,
-      });
-      fetchData();
-    }
-  };
-
-  const handleUpdateOpportunityTags = async (id: string, tags: string[]) => {
-    const { error } = await supabase
-      .from("opportunities")
-      .update({ tags })
-      .eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error updating tags",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      fetchData();
-    }
-  };
-
-  const handleUpdateOpportunityRole = async (id: string, role_title: string) => {
-    const { error } = await supabase
-      .from("opportunities")
-      .update({ role_title })
-      .eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error updating role",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      fetchData();
-    }
-  };
-
-  const FROZEN_TAG = "🧊 FROZEN";
-
-  const handleFreezeOpportunity = async (id: string, frozen: boolean) => {
-    const opportunity = opportunities.find(o => o.id === id);
-    if (!opportunity) return;
-
-    const currentTags = opportunity.tags || [];
-    let newTags: string[];
-
-    if (frozen) {
-      // Add frozen tag
-      newTags = currentTags.includes(FROZEN_TAG) ? currentTags : [...currentTags, FROZEN_TAG];
-    } else {
-      // Remove frozen tag
-      newTags = currentTags.filter(t => t !== FROZEN_TAG);
-    }
-
-    const { error } = await supabase
-      .from("opportunities")
-      .update({ tags: newTags })
-      .eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error updating",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: frozen ? "🧊 Job frozen" : "Job unfrozen",
-        description: frozen 
-          ? `${opportunity.company_name} was frozen.` 
-          : `${opportunity.company_name} was unfrozen.`,
       });
       fetchData();
     }
@@ -383,7 +306,7 @@ const Dashboard = () => {
     } else {
       toast({
         title: "Opportunities moved",
-        description: `${selectedIds.size} opportunities moved to ${status.replace("_", " ")}.`,
+        description: `${selectedIds.size} opportunities moved.`,
       });
       handleClearSelection();
       fetchData();
@@ -415,9 +338,7 @@ const Dashboard = () => {
     setShowBulkDeleteConfirm(false);
   };
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const handleClearFunnel = async () => {
+  const handleClearPipeline = async () => {
     if (!user) return;
 
     const { error } = await supabase
@@ -439,6 +360,25 @@ const Dashboard = () => {
       fetchData();
     }
     setShowClearConfirm(false);
+  };
+
+  const handleExportData = () => {
+    const exportData = {
+      opportunities,
+      targetCompanies,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shipper-export-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Data exported",
+      description: "Your data has been downloaded.",
+    });
   };
 
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
@@ -594,38 +534,50 @@ const Dashboard = () => {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="database" className="gap-2">
-                <Database className="h-4 w-4" />
-                Database
+              <TabsTrigger value="explore" className="gap-2">
+                <Compass className="h-4 w-4" />
+                Explore
               </TabsTrigger>
             </TabsList>
+            
+            {/* Header Buttons */}
             <div className="flex items-center gap-2">
               <Button className="gap-2" onClick={handleNewOpportunity}>
                 <Plus className="h-4 w-4" />
-                New Opportunity
+                New
               </Button>
+              
               {opportunities.length > 0 && (
-                <>
-                  <Button 
-                    variant={selectionMode ? "secondary" : "outline"}
-                    className="gap-2"
-                    onClick={() => {
-                      setSelectionMode(!selectionMode);
-                      if (selectionMode) handleClearSelection();
-                    }}
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                    {selectionMode ? "Cancel" : "Select"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setShowClearConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Clear Pipeline
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectionMode(!selectionMode);
+                        if (selectionMode) handleClearSelection();
+                      }}
+                    >
+                      <CheckSquare className="h-4 w-4 mr-2" />
+                      {selectionMode ? "Cancel Selection" : "Select Multiple"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setShowClearConfirm(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear Pipeline
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportData}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Data
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -648,10 +600,6 @@ const Dashboard = () => {
               onUpdate={fetchData}
               onDelete={handleDeleteOpportunity}
               onDuplicate={handleDuplicateOpportunity}
-              onUpdateTags={handleUpdateOpportunityTags}
-              onUpdateRole={handleUpdateOpportunityRole}
-              onFreeze={handleFreezeOpportunity}
-              allTags={allTags}
               selectedIds={selectedIds}
               onSelect={handleSelectOpportunity}
               selectionMode={selectionMode}
@@ -667,7 +615,7 @@ const Dashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value="database" className="mt-0">
+          <TabsContent value="explore" className="mt-0">
             {user && (
               <PresetCompaniesView 
                 userId={user.id}
@@ -699,7 +647,7 @@ const Dashboard = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear entire pipeline?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>all {opportunities.length} opportunities</strong> from your pipeline?
+              This will delete <strong>all {opportunities.length} opportunities</strong> from your pipeline.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -707,7 +655,7 @@ const Dashboard = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleClearFunnel}
+              onClick={handleClearPipeline}
             >
               Clear All
             </AlertDialogAction>
@@ -800,198 +748,136 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
     }
   };
 
-  // Get unique countries and types
-  const countries = useMemo(() => [...new Set(companies.map(c => c.country))], [companies]);
-  const companyTypes = useMemo(() => [...new Set(companies.map(c => c.company_type).filter(Boolean))], [companies]);
-
-  // Filter companies
-  const filteredCompanies = useMemo(() => {
-    return companies.filter(c => {
-      if (selectedCountry && c.country !== selectedCountry) return false;
-      if (selectedType && c.company_type !== selectedType) return false;
-      return true;
-    });
-  }, [companies, selectedCountry, selectedType]);
-
-  const groupedCompanies = filteredCompanies.reduce((acc, company) => {
-    if (!acc[company.country]) {
-      acc[company.country] = [];
-    }
-    acc[company.country].push(company);
+  // Group by country
+  const groupedCompanies = companies.reduce((acc, company) => {
+    const country = company.country.toLowerCase();
+    if (!acc[country]) acc[country] = [];
+    acc[country].push(company);
     return acc;
   }, {} as Record<string, TargetCompany[]>);
 
+  const filteredGrouped = Object.entries(groupedCompanies)
+    .filter(([country]) => !selectedCountry || country === selectedCountry)
+    .map(([country, comps]) => [
+      country,
+      selectedType ? comps.filter(c => c.company_type === selectedType) : comps
+    ] as [string, TargetCompany[]])
+    .filter(([_, comps]) => comps.length > 0);
+
   if (companies.length === 0) {
     return (
-      <div className="bg-background rounded-xl border border-border p-12 text-center">
-        <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="font-semibold text-lg mb-2">No target companies</h3>
-        <p className="text-muted-foreground text-sm">
-          Complete onboarding to add companies to your list.
-        </p>
+      <div className="text-center py-12 text-muted-foreground">
+        <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium">No target companies yet</p>
+        <p className="text-sm">Go to Explore to add companies to your list.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          Filters:
-        </div>
-
-        {/* Country filter */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCountry(null)}
-            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-              selectedCountry === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted"
-            }`}
-          >
-            All countries
-          </button>
-          {countries.map((country) => {
-            const info = countryMap[country];
-            const code = info?.code || country.toUpperCase().slice(0, 2);
-            return (
-              <button
-                key={country}
-                onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
-                className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
-                  selectedCountry === country
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background border-border hover:bg-muted"
-                }`}
-              >
-                {FLAG_IMAGES[code] && (
-                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
-                )}
-                {info?.name || country}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Type filter */}
-        <div className="flex flex-wrap gap-2">
-          {companyTypes.map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(selectedType === type ? null : type)}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                selectedType === type
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={selectedCountry === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedCountry(null)}
+        >
+          All Countries
+        </Button>
+        {Object.keys(groupedCompanies).map(country => {
+          const info = countryMap[country];
+          return (
+            <Button
+              key={country}
+              variant={selectedCountry === country ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setSelectedCountry(country)}
             >
-              {getTypeLabel(type)}
-            </button>
-          ))}
-        </div>
+              {info && FLAG_IMAGES[info.code] && (
+                <img src={FLAG_IMAGES[info.code]} alt={info.name} className="w-4 h-3 object-cover rounded-sm" />
+              )}
+              {info?.name || country}
+            </Button>
+          );
+        })}
       </div>
 
-
-      {Object.entries(groupedCompanies).map(([country, countryCompanies]) => {
-        const countryInfo = countryMap[country];
-        const countryCode = countryInfo?.code || country.toUpperCase().slice(0, 2);
+      {/* Companies by Country */}
+      {filteredGrouped.map(([country, comps]) => {
+        const info = countryMap[country];
         return (
-        <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-semibold flex items-center gap-2">
-              {FLAG_IMAGES[countryCode] && (
-                <img 
-                  src={FLAG_IMAGES[countryCode]} 
-                  alt={countryInfo?.name} 
-                  className="w-5 h-3.5 object-cover rounded-sm"
-                />
+          <div key={country} className="space-y-3">
+            <div className="flex items-center gap-2">
+              {info && FLAG_IMAGES[info.code] && (
+                <img src={FLAG_IMAGES[info.code]} alt={info.name} className="w-5 h-4 object-cover rounded-sm" />
               )}
-              {countryInfo?.name || country}
-              <span className="text-muted-foreground font-normal text-sm">
-                ({countryCompanies.length})
-              </span>
-            </h3>
-          </div>
-          <div className="divide-y divide-border">
-            {countryCompanies.map((company) => {
-              const oppCount = getOpportunityCountByCompany(company.company_name);
-              return (
-              <div key={company.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-medium">{company.company_name}</h4>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(company.company_type)}`}>
-                      {getTypeLabel(company.company_type)}
-                    </span>
-                    {oppCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {oppCount} {oppCount === 1 ? "opportunity" : "opportunities"}
-                      </span>
-                    )}
+              <h3 className="font-semibold">{info?.name || country}</h3>
+              <span className="text-muted-foreground text-sm">({comps.length})</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {comps.map(company => {
+                const oppCount = getOpportunityCountByCompany(company.company_name);
+                return (
+                  <div
+                    key={company.id}
+                    className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium truncate">{company.company_name}</h4>
+                        {company.sector && (
+                          <p className="text-sm text-muted-foreground truncate">{company.sector}</p>
+                        )}
+                      </div>
+                      {company.company_type && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeBadgeColor(company.company_type)}`}>
+                          {getTypeLabel(company.company_type)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCreateOpportunity(company)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Opportunity
+                      </Button>
+                      {oppCount > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {oppCount} opp{oppCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{company.sector}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {company.careers_url && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={company.careers_url} target="_blank" rel="noopener noreferrer">
-                        View Jobs
-                      </a>
-                    </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => setCompanyToDelete(company)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => onCreateOpportunity(company)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create Opportunity
-                  </Button>
-                </div>
-              </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
         );
       })}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+      {/* Delete confirmation */}
+      <AlertDialog open={!!companyToDelete} onOpenChange={() => setCompanyToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete company?</AlertDialogTitle>
+            <AlertDialogTitle>Remove company?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <strong>{companyToDelete?.company_name}</strong> from your target companies?
-              {getOpportunityCountByCompany(companyToDelete?.company_name || "") > 0 && (
-                <span className="block mt-2 text-warning">
-                  This company has {getOpportunityCountByCompany(companyToDelete?.company_name || "")} associated opportunity(s).
-                </span>
-              )}
+              Remove {companyToDelete?.company_name} from your target list? This won't delete any opportunities.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (companyToDelete) {
-                  onDeleteCompany(companyToDelete.id);
-                  setCompanyToDelete(null);
-                }
+                if (companyToDelete) onDeleteCompany(companyToDelete.id);
+                setCompanyToDelete(null);
               }}
             >
-              Delete
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

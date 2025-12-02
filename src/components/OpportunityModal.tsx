@@ -8,29 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Sparkles, Copy, X, Plus, Tag } from "lucide-react";
+import { Trash2, Sparkles, Copy, Star } from "lucide-react";
 import { AICoach } from "@/components/AICoach";
-import { Badge } from "@/components/ui/badge";
 import { opportunitySchema, getValidationError } from "@/lib/validations";
 
-const COMMON_TAGS = [
-  "Product Manager",
-  "Senior PM",
-  "Lead PM",
-  "Growth PM",
-  "Technical PM",
-  "Data PM",
-  "Platform PM",
-  "UX PM",
-  "B2B",
-  "B2C",
-  "Fintech",
-  "SaaS",
-  "E-commerce",
-  "AI/ML",
-  "Prioridade Alta",
-  "Follow-up",
-];
 import type { Database } from "@/integrations/supabase/types";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
@@ -59,6 +40,8 @@ export interface Opportunity {
   applied_at: string | null;
   tags: string[] | null;
   display_order?: number | null;
+  fit_level?: number | null;
+  opportunity_tag?: string | null;
 }
 
 export interface OpportunityProfile {
@@ -83,28 +66,36 @@ interface OpportunityModalProps {
 
 const SENIORITY_OPTIONS: { value: SeniorityLevel; label: string }[] = [
   { value: "entry", label: "Entry Level" },
-  { value: "mid", label: "Pleno" },
-  { value: "senior", label: "Sênior" },
+  { value: "mid", label: "Mid Level" },
+  { value: "senior", label: "Senior" },
   { value: "lead", label: "Lead" },
   { value: "principal", label: "Principal" },
-  { value: "director", label: "Diretor" },
+  { value: "director", label: "Director" },
   { value: "vp", label: "VP" },
 ];
 
 const WORK_MODEL_OPTIONS: { value: WorkModel; label: string }[] = [
-  { value: "remote", label: "Remoto" },
-  { value: "hybrid", label: "Híbrido" },
-  { value: "onsite", label: "Presencial" },
+  { value: "remote", label: "Remote" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "onsite", label: "Onsite" },
 ];
 
 const STATUS_OPTIONS: { value: OpportunityStatus; label: string }[] = [
-  { value: "researching", label: "Pesquisando" },
-  { value: "applied", label: "Candidatado" },
-  { value: "interviewing", label: "Entrevistando" },
-  { value: "offer", label: "Oferta" },
-  { value: "rejected", label: "Rejeitado" },
+  { value: "researching", label: "Researching" },
+  { value: "applied", label: "Applied" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "assessment", label: "Assessment" },
+  { value: "offer", label: "Offer" },
+  { value: "rejected", label: "Rejected" },
   { value: "ghosted", label: "Ghosted" },
-  { value: "withdrawn", label: "Desistiu" },
+  { value: "withdrawn", label: "Withdrawn" },
+];
+
+const TAG_OPTIONS = [
+  { value: "", label: "None" },
+  { value: "high_priority", label: "🔥 High Priority" },
+  { value: "referral", label: "🤝 Referral" },
+  { value: "dream_job", label: "💜 Dream Job" },
 ];
 
 export const OpportunityModal = ({ 
@@ -137,20 +128,8 @@ export const OpportunityModal = ({
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
-
-  const addTag = (tag: string) => {
-    const trimmedTag = tag.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag]);
-    }
-    setNewTag("");
-  };
-
-  const removeTag = (tag: string) => {
-    setTags(tags.filter(t => t !== tag));
-  };
+  const [fitLevel, setFitLevel] = useState<number>(2);
+  const [opportunityTag, setOpportunityTag] = useState<string>("");
 
   // Reset form when opportunity changes
   useEffect(() => {
@@ -168,7 +147,8 @@ export const OpportunityModal = ({
       setNextAction(opportunity.next_action || "");
       setNextActionDate(opportunity.next_action_date || "");
       setNotes(opportunity.notes || "");
-      setTags(opportunity.tags || []);
+      setFitLevel(opportunity.fit_level || 2);
+      setOpportunityTag(opportunity.opportunity_tag || "");
     } else {
       // Reset for new opportunity
       setCompanyName("");
@@ -184,14 +164,14 @@ export const OpportunityModal = ({
       setNextAction("");
       setNextActionDate("");
       setNotes("");
-      setTags([]);
+      setFitLevel(2);
+      setOpportunityTag("");
     }
   }, [opportunity, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data with zod
     const formData = {
       companyName: companyName.trim(),
       roleTitle: roleTitle.trim(),
@@ -202,13 +182,13 @@ export const OpportunityModal = ({
       contactLinkedin: contactLinkedin.trim(),
       nextAction: nextAction.trim(),
       notes: notes.trim(),
-      tags,
+      tags: [],
     };
 
     const validationError = getValidationError(opportunitySchema, formData);
     if (validationError) {
       toast({
-        title: "Erro de validação",
+        title: "Validation error",
         description: validationError,
         variant: "destructive",
       });
@@ -231,21 +211,20 @@ export const OpportunityModal = ({
       next_action: formData.nextAction || null,
       next_action_date: nextActionDate || null,
       notes: formData.notes || null,
-      tags: formData.tags.length > 0 ? formData.tags : [],
       user_id: userId,
+      fit_level: fitLevel,
+      opportunity_tag: opportunityTag || null,
     };
 
     let error;
 
     if (opportunity) {
-      // Update existing
       const result = await supabase
         .from("opportunities")
         .update(data)
         .eq("id", opportunity.id);
       error = result.error;
     } else {
-      // Create new
       const result = await supabase
         .from("opportunities")
         .insert(data);
@@ -254,13 +233,13 @@ export const OpportunityModal = ({
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: opportunity ? "Oportunidade atualizada!" : "Oportunidade criada!",
+        title: opportunity ? "Opportunity updated!" : "Opportunity created!",
         description: `${companyName} - ${roleTitle}`,
       });
       onSaved();
@@ -281,14 +260,14 @@ export const OpportunityModal = ({
 
     if (error) {
       toast({
-        title: "Erro ao deletar",
+        title: "Error deleting",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade deletada",
-        description: `${opportunity.company_name} foi removida.`,
+        title: "Opportunity deleted",
+        description: `${opportunity.company_name} was removed.`,
       });
       onDeleted?.();
       onOpenChange(false);
@@ -305,7 +284,7 @@ export const OpportunityModal = ({
       .insert({
         user_id: userId,
         company_name: opportunity.company_name,
-        role_title: `${opportunity.role_title} (Cópia)`,
+        role_title: `${opportunity.role_title} (Copy)`,
         status: "researching",
         job_url: opportunity.job_url,
         location: opportunity.location,
@@ -315,19 +294,20 @@ export const OpportunityModal = ({
         contact_name: opportunity.contact_name,
         contact_linkedin: opportunity.contact_linkedin,
         notes: opportunity.notes,
-        tags: opportunity.tags,
+        fit_level: opportunity.fit_level,
+        opportunity_tag: opportunity.opportunity_tag,
       });
 
     if (error) {
       toast({
-        title: "Erro ao duplicar",
+        title: "Error duplicating",
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Oportunidade duplicada!",
-        description: `Criada cópia de ${opportunity.company_name}.`,
+        title: "Opportunity duplicated!",
+        description: `Copy of ${opportunity.company_name} created.`,
       });
       onDuplicate?.();
       onOpenChange(false);
@@ -343,7 +323,7 @@ export const OpportunityModal = ({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>
-              {isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}
+              {isEditing ? "Edit Opportunity" : "New Opportunity"}
             </DialogTitle>
             {isEditing && (
               <Button
@@ -363,28 +343,69 @@ export const OpportunityModal = ({
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">Empresa *</Label>
+                <Label htmlFor="companyName">Company *</Label>
                 <Input
                   id="companyName"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Nome da empresa"
-                required
-              />
+                  placeholder="Company name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roleTitle">Role Title *</Label>
+                <Input
+                  id="roleTitle"
+                  value={roleTitle}
+                  onChange={(e) => setRoleTitle(e.target.value)}
+                  placeholder="Product Manager"
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="roleTitle">Cargo *</Label>
-              <Input
-                id="roleTitle"
-                value={roleTitle}
-                onChange={(e) => setRoleTitle(e.target.value)}
-                placeholder="Product Manager"
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
+            {/* Location & Work Model */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="São Paulo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="workModel">Work Model</Label>
+                <Select value={workModel} onValueChange={(v) => setWorkModel(v as WorkModel)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORK_MODEL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="jobUrl">Job URL</Label>
+              <Input
+                id="jobUrl"
+                type="url"
+                value={jobUrl}
+                onChange={(e) => setJobUrl(e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+
+            <div className="border-t border-border pt-4" />
+
+            {/* Status */}
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as OpportunityStatus)}>
@@ -400,241 +421,168 @@ export const OpportunityModal = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="jobUrl">Link da Vaga</Label>
-              <Input
-                id="jobUrl"
-                type="url"
-                value={jobUrl}
-                onChange={(e) => setJobUrl(e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
 
-          {/* Location & Work Model */}
-          <div className="grid grid-cols-3 gap-4">
+            {/* Fit Level */}
             <div className="space-y-2">
-              <Label htmlFor="location">Localização</Label>
-              <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="São Paulo, SP"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="workModel">Modelo</Label>
-              <Select value={workModel} onValueChange={(v) => setWorkModel(v as WorkModel)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORK_MODEL_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="seniorityLevel">Senioridade</Label>
-              <Select value={seniorityLevel} onValueChange={(v) => setSeniorityLevel(v as SeniorityLevel)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SENIORITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Salary & Contact */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="salaryRange">Faixa Salarial</Label>
-              <Input
-                id="salaryRange"
-                value={salaryRange}
-                onChange={(e) => setSalaryRange(e.target.value)}
-                placeholder="R$ 15.000 - R$ 20.000"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Nome do Contato</Label>
-              <Input
-                id="contactName"
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="Maria Silva"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contactLinkedin">LinkedIn do Contato</Label>
-            <Input
-              id="contactLinkedin"
-              value={contactLinkedin}
-              onChange={(e) => setContactLinkedin(e.target.value)}
-              placeholder="https://linkedin.com/in/..."
-            />
-          </div>
-
-          {/* Next Action */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nextAction">Próxima Ação</Label>
-              <Input
-                id="nextAction"
-                value={nextAction}
-                onChange={(e) => setNextAction(e.target.value)}
-                placeholder="Enviar follow-up"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextActionDate">Data da Próxima Ação</Label>
-              <Input
-                id="nextActionDate"
-                type="date"
-                value={nextActionDate}
-                onChange={(e) => setNextActionDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Anotações sobre a oportunidade..."
-              rows={3}
-            />
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5" />
-              Tags
-            </Label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="gap-1">
-                  {tag}
+              <Label>Fit Level</Label>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((level) => (
                   <button
+                    key={level}
                     type="button"
-                    onClick={() => removeTag(tag)}
-                    className="hover:text-destructive"
+                    onClick={() => setFitLevel(level)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border transition-all ${
+                      fitLevel === level 
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "border-border hover:border-primary/50"
+                    }`}
                   >
-                    <X className="h-3 w-3" />
+                    {[...Array(level)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    ))}
+                    {[...Array(3 - level)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                    ))}
+                    <span className="ml-1 text-sm">
+                      {level === 1 ? "Low" : level === 2 ? "Medium" : "High"}
+                    </span>
                   </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Adicionar tag..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag(newTag);
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => addTag(newTag)}
-                disabled={!newTag.trim()}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {COMMON_TAGS.filter(t => !tags.includes(t)).slice(0, 8).map((tag) => (
-                <Badge 
-                  key={tag} 
-                  variant="outline" 
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs"
-                  onClick={() => addTag(tag)}
-                >
-                  + {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {isEditing && (
-              <div className="flex gap-2 sm:mr-auto">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="destructive" className="gap-1">
-                      <Trash2 className="h-4 w-4" />
-                      Deletar
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Deletar oportunidade?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja deletar a oportunidade em {opportunity?.company_name}? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                        {isDeleting ? "Deletando..." : "Deletar"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="gap-1"
-                  onClick={handleDuplicate}
-                  disabled={isDuplicating}
-                >
-                  <Copy className="h-4 w-4" />
-                  {isDuplicating ? "Duplicando..." : "Duplicar"}
-                </Button>
+                ))}
               </div>
-            )}
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Salvando..." : isEditing ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            </div>
 
-    {/* AI Coach Modal */}
-    {opportunity && (
-      <AICoach
-        open={showAICoach}
-        onOpenChange={setShowAICoach}
-        opportunity={opportunity}
-        profile={profile || null}
-      />
-    )}
-  </>
+            {/* Tag */}
+            <div className="space-y-2">
+              <Label htmlFor="opportunityTag">Tag</Label>
+              <Select value={opportunityTag} onValueChange={setOpportunityTag}>
+                <SelectTrigger>
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TAG_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="border-t border-border pt-4" />
+
+            {/* Next Action */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nextAction">Next Action</Label>
+                <Input
+                  id="nextAction"
+                  value={nextAction}
+                  onChange={(e) => setNextAction(e.target.value)}
+                  placeholder="Prepare case study"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nextActionDate">Due Date</Label>
+                <Input
+                  id="nextActionDate"
+                  type="date"
+                  value={nextActionDate}
+                  onChange={(e) => setNextActionDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactName">Contact Name</Label>
+                <Input
+                  id="contactName"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Maria Silva"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactLinkedin">Contact LinkedIn</Label>
+                <Input
+                  id="contactLinkedin"
+                  value={contactLinkedin}
+                  onChange={(e) => setContactLinkedin(e.target.value)}
+                  placeholder="https://linkedin.com/in/..."
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notes about this opportunity..."
+                rows={3}
+              />
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {isEditing && (
+                <div className="flex gap-2 sm:mr-auto">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" variant="destructive" className="gap-1">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete opportunity?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete the opportunity at {opportunity?.company_name}? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="gap-1"
+                    onClick={handleDuplicate}
+                    disabled={isDuplicating}
+                  >
+                    <Copy className="h-4 w-4" />
+                    {isDuplicating ? "Duplicating..." : "Duplicate"}
+                  </Button>
+                </div>
+              )}
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : isEditing ? "Save" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Coach Modal */}
+      {opportunity && (
+        <AICoach
+          open={showAICoach}
+          onOpenChange={setShowAICoach}
+          opportunity={opportunity}
+          profile={profile || null}
+        />
+      )}
+    </>
   );
 };
