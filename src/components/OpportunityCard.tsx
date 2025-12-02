@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Building2, MapPin, Calendar, ExternalLink, GripVertical } from "lucide-react";
+import { Briefcase, MapPin, Calendar, ExternalLink, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Opportunity } from "./OpportunityModal";
 
@@ -62,10 +62,10 @@ export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h4 className="font-medium text-sm truncate">{opportunity.role_title}</h4>
+              <h4 className="font-semibold text-sm truncate">{opportunity.company_name}</h4>
               <div className="flex items-center gap-1 text-muted-foreground text-xs mt-0.5">
-                <Building2 className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{opportunity.company_name}</span>
+                <Briefcase className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{opportunity.role_title}</span>
               </div>
             </div>
             

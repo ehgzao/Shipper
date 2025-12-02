@@ -99,6 +99,60 @@ const STRENGTH_OPTIONS: { value: StrengthOrientation; label: string; description
   { value: "balanced", label: "Equilibrado", description: "Mix de ambos" },
 ];
 
+// Role suggestions based on profile
+const getSuggestedRoles = (
+  productYears: string,
+  background: AppRole | "",
+  strength: StrengthOrientation | ""
+): { role: string; fit: string }[] => {
+  const roles: { role: string; fit: string }[] = [];
+  
+  // Base roles by experience level
+  if (productYears === "0") {
+    roles.push(
+      { role: "Associate Product Manager", fit: "Ideal para transição de carreira" },
+      { role: "Junior Product Manager", fit: "Entrada em produto" }
+    );
+  } else if (productYears === "0-1") {
+    roles.push(
+      { role: "Product Manager", fit: "Nível pleno inicial" },
+      { role: "Associate Product Manager", fit: "Consolidar experiência" }
+    );
+  } else if (productYears === "1-3") {
+    roles.push(
+      { role: "Product Manager", fit: "Nível pleno" },
+      { role: "Senior Product Manager", fit: "Próximo passo" }
+    );
+  } else if (productYears === "3-5") {
+    roles.push(
+      { role: "Senior Product Manager", fit: "Nível sênior" },
+      { role: "Lead Product Manager", fit: "Liderança técnica" }
+    );
+  } else if (productYears === "5+") {
+    roles.push(
+      { role: "Lead Product Manager", fit: "Liderança de times" },
+      { role: "Principal Product Manager", fit: "IC sênior" },
+      { role: "Head of Product", fit: "Gestão de área" }
+    );
+  }
+  
+  // Add specialization based on background
+  if (background === "engineering" && strength !== "business") {
+    roles.push({ role: "Technical Product Manager", fit: `Background em ${background}` });
+  }
+  if (background === "design") {
+    roles.push({ role: "Product Design Manager", fit: "Background em design" });
+  }
+  if ((background === "sales" || background === "marketing") && strength !== "technical") {
+    roles.push({ role: "Growth Product Manager", fit: `Background em ${background === "sales" ? "vendas" : "marketing"}` });
+  }
+  if (background === "operations") {
+    roles.push({ role: "Platform Product Manager", fit: "Background em operações" });
+  }
+  
+  return roles.slice(0, 5); // Max 5 suggestions
+};
+
 export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -506,6 +560,33 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                 <h2 className="font-semibold">Empresas alvo iniciais</h2>
               </div>
               
+              {/* Suggested roles based on profile */}
+              {(() => {
+                const suggestedRoles = getSuggestedRoles(yearsExperienceProduct, background, strengthOrientation);
+                return suggestedRoles.length > 0 && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <p className="text-sm font-medium text-primary mb-2">
+                      🎯 Cargos recomendados para você:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedRoles.map((item, idx) => (
+                        <div 
+                          key={idx}
+                          className="bg-background border border-border rounded-full px-3 py-1 text-xs"
+                          title={item.fit}
+                        >
+                          <span className="font-medium">{item.role}</span>
+                          <span className="text-muted-foreground ml-1">· {item.fit}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Busque por esses cargos nas empresas abaixo
+                    </p>
+                  </div>
+                );
+              })()}
+
               <p className="text-sm text-muted-foreground">
                 Selecione empresas para começar seu pipeline. Você pode adicionar mais depois.
               </p>
