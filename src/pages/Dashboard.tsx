@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter, Trash2 } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter, Trash2, CheckSquare } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,8 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { StaleNotifications } from "@/components/StaleNotifications";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import type { Database as SupabaseDB } from "@/integrations/supabase/types";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -76,6 +78,9 @@ const Dashboard = () => {
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all" });
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -339,6 +344,77 @@ const Dashboard = () => {
     }
   };
 
+  // Bulk selection handlers
+  const handleSelectOpportunity = (id: string, selected: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBulkMoveToStatus = async (status: SupabaseDB["public"]["Enums"]["opportunity_status"]) => {
+    if (selectedIds.size === 0) return;
+
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ 
+        status,
+        applied_at: status === "applied" ? new Date().toISOString() : undefined,
+        updated_at: new Date().toISOString()
+      })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({
+        title: "Error moving opportunities",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Opportunities moved",
+        description: `${selectedIds.size} opportunities moved to ${status.replace("_", " ")}.`,
+      });
+      handleClearSelection();
+      fetchData();
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({
+        title: "Error deleting opportunities",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Opportunities deleted",
+        description: `${selectedIds.size} opportunities were deleted.`,
+      });
+      handleClearSelection();
+      fetchData();
+    }
+    setShowBulkDeleteConfirm(false);
+  };
+
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleClearFunnel = async () => {
@@ -529,14 +605,27 @@ const Dashboard = () => {
                 New Opportunity
               </Button>
               {opportunities.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => setShowClearConfirm(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Clear Pipeline
-                </Button>
+                <>
+                  <Button 
+                    variant={selectionMode ? "secondary" : "outline"}
+                    className="gap-2"
+                    onClick={() => {
+                      setSelectionMode(!selectionMode);
+                      if (selectionMode) handleClearSelection();
+                    }}
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                    {selectionMode ? "Cancel" : "Select"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setShowClearConfirm(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear Pipeline
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -563,6 +652,9 @@ const Dashboard = () => {
               onUpdateRole={handleUpdateOpportunityRole}
               onFreeze={handleFreezeOpportunity}
               allTags={allTags}
+              selectedIds={selectedIds}
+              onSelect={handleSelectOpportunity}
+              selectionMode={selectionMode}
             />
           </TabsContent>
           
@@ -622,6 +714,36 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete selected opportunities?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedIds.size} selected opportunities</strong>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleBulkDelete}
+            >
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={handleClearSelection}
+        onMoveToStatus={handleBulkMoveToStatus}
+        onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
+      />
     </div>
   );
 };

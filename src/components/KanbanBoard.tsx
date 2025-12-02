@@ -65,6 +65,9 @@ interface KanbanBoardProps {
   onUpdateRole?: (id: string, role: string) => void;
   onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 export const KanbanBoard = ({ 
@@ -76,7 +79,10 @@ export const KanbanBoard = ({
   onUpdateTags,
   onUpdateRole,
   onFreeze,
-  allTags
+  allTags,
+  selectedIds = new Set(),
+  onSelect,
+  selectionMode = false
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
@@ -276,6 +282,9 @@ export const KanbanBoard = ({
                 onUpdateRole={onUpdateRole}
                 onFreeze={onFreeze}
                 allTags={allTags}
+                selectedIds={selectedIds}
+                onSelect={onSelect}
+                selectionMode={selectionMode}
               />
             );
           })}
@@ -329,6 +338,9 @@ interface KanbanColumnProps {
   onUpdateRole?: (id: string, role: string) => void;
   onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 const KanbanColumn = ({ 
@@ -341,7 +353,10 @@ const KanbanColumn = ({
   onUpdateTags,
   onUpdateRole,
   onFreeze,
-  allTags
+  allTags,
+  selectedIds = new Set(),
+  onSelect,
+  selectionMode = false
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -435,6 +450,9 @@ const KanbanColumn = ({
                   onUpdateRole={onUpdateRole}
                   onFreeze={onFreeze}
                   allTags={allTags}
+                  isSelected={selectedIds.has(opportunity.id)}
+                  onSelect={onSelect}
+                  selectionMode={selectionMode}
                 />
               </div>
             ))
