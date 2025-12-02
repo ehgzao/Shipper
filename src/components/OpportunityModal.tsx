@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Sparkles } from "lucide-react";
+import { Trash2, Sparkles, Copy } from "lucide-react";
 import { AICoach } from "@/components/AICoach";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -54,6 +54,7 @@ interface OpportunityModalProps {
   userId: string;
   onSaved: () => void;
   onDeleted?: () => void;
+  onDuplicate?: () => void;
   profile?: OpportunityProfile | null;
 }
 
@@ -90,10 +91,12 @@ export const OpportunityModal = ({
   userId, 
   onSaved,
   onDeleted,
+  onDuplicate,
   profile 
 }: OpportunityModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [showAICoach, setShowAICoach] = useState(false);
   const { toast } = useToast();
   
@@ -236,6 +239,44 @@ export const OpportunityModal = ({
       onOpenChange(false);
     }
     setIsDeleting(false);
+  };
+
+  const handleDuplicate = async () => {
+    if (!opportunity) return;
+    setIsDuplicating(true);
+
+    const { error } = await supabase
+      .from("opportunities")
+      .insert({
+        user_id: userId,
+        company_name: opportunity.company_name,
+        role_title: `${opportunity.role_title} (Cópia)`,
+        status: "researching",
+        job_url: opportunity.job_url,
+        location: opportunity.location,
+        work_model: opportunity.work_model,
+        seniority_level: opportunity.seniority_level,
+        salary_range: opportunity.salary_range,
+        contact_name: opportunity.contact_name,
+        contact_linkedin: opportunity.contact_linkedin,
+        notes: opportunity.notes,
+      });
+
+    if (error) {
+      toast({
+        title: "Erro ao duplicar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Oportunidade duplicada!",
+        description: `Criada cópia de ${opportunity.company_name}.`,
+      });
+      onDuplicate?.();
+      onOpenChange(false);
+    }
+    setIsDuplicating(false);
   };
 
   const isEditing = !!opportunity;
@@ -426,28 +467,40 @@ export const OpportunityModal = ({
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {isEditing && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="destructive" className="gap-1 sm:mr-auto">
-                    <Trash2 className="h-4 w-4" />
-                    Deletar
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Deletar oportunidade?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja deletar a oportunidade em {opportunity?.company_name}? Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                      {isDeleting ? "Deletando..." : "Deletar"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <div className="flex gap-2 sm:mr-auto">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" className="gap-1">
+                      <Trash2 className="h-4 w-4" />
+                      Deletar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Deletar oportunidade?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja deletar a oportunidade em {opportunity?.company_name}? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                        {isDeleting ? "Deletando..." : "Deletar"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="gap-1"
+                  onClick={handleDuplicate}
+                  disabled={isDuplicating}
+                >
+                  <Copy className="h-4 w-4" />
+                  {isDuplicating ? "Duplicando..." : "Duplicar"}
+                </Button>
+              </div>
             )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

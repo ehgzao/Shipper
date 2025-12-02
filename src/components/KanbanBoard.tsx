@@ -15,6 +15,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OpportunityCard } from "./OpportunityCard";
@@ -24,9 +25,10 @@ import type { Database } from "@/integrations/supabase/types";
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
 
 interface KanbanColumn {
-  id: OpportunityStatus;
+  id: OpportunityStatus | "trash";
   title: string;
   color: string;
+  isTrash?: boolean;
 }
 
 const COLUMNS: KanbanColumn[] = [
@@ -34,6 +36,7 @@ const COLUMNS: KanbanColumn[] = [
   { id: "applied", title: "Candidatado", color: "bg-status-applied" },
   { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing" },
   { id: "offer", title: "Oferta", color: "bg-status-offer" },
+  { id: "trash", title: "Lixeira", color: "bg-destructive", isTrash: true },
 ];
 
 interface KanbanBoardProps {
@@ -55,7 +58,8 @@ export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: Kan
     useSensor(KeyboardSensor)
   );
 
-  const getOpportunitiesByStatus = (status: OpportunityStatus) => {
+  const getOpportunitiesByStatus = (status: OpportunityStatus | "trash") => {
+    if (status === "trash") return [];
     return opportunities.filter(o => o.status === status);
   };
 
@@ -72,17 +76,43 @@ export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: Kan
     const opportunityId = active.id as string;
     const overId = over.id as string;
 
+    // Check if dropped on trash
+    if (overId === "trash") {
+      const opportunity = opportunities.find(o => o.id === opportunityId);
+      if (opportunity) {
+        const { error } = await supabase
+          .from("opportunities")
+          .delete()
+          .eq("id", opportunityId);
+
+        if (error) {
+          toast({
+            title: "Erro ao excluir",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Oportunidade excluída",
+            description: `${opportunity.company_name} foi removida.`,
+          });
+          onUpdate();
+        }
+      }
+      return;
+    }
+
     // Check if dropped on a column
     const targetColumn = COLUMNS.find(col => col.id === overId);
     
-    if (targetColumn) {
+    if (targetColumn && !targetColumn.isTrash) {
       const opportunity = opportunities.find(o => o.id === opportunityId);
       if (opportunity && opportunity.status !== targetColumn.id) {
         // Update status in database
         const { error } = await supabase
           .from("opportunities")
           .update({ 
-            status: targetColumn.id,
+            status: targetColumn.id as OpportunityStatus,
             applied_at: targetColumn.id === "applied" ? new Date().toISOString() : opportunity.applied_at
           })
           .eq("id", opportunityId);
@@ -115,7 +145,7 @@ export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: Kan
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {COLUMNS.map((column) => {
           const columnOpportunities = getOpportunitiesByStatus(column.id);
           
@@ -125,6 +155,7 @@ export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: Kan
               column={column}
               opportunities={columnOpportunities}
               onOpportunityClick={onOpportunityClick}
+              isDragging={!!activeId}
             />
           );
         })}
@@ -148,12 +179,39 @@ interface KanbanColumnProps {
   column: KanbanColumn;
   opportunities: Opportunity[];
   onOpportunityClick: (opportunity: Opportunity) => void;
+  isDragging: boolean;
 }
 
-const KanbanColumn = ({ column, opportunities, onOpportunityClick }: KanbanColumnProps) => {
+const KanbanColumn = ({ column, opportunities, onOpportunityClick, isDragging }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
+
+  // Trash column styling
+  if (column.isTrash) {
+    return (
+      <div 
+        ref={setNodeRef}
+        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all ${
+          isOver 
+            ? "border-destructive bg-destructive/10" 
+            : isDragging 
+              ? "border-destructive/50 bg-destructive/5" 
+              : "border-border"
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Trash2 className={`h-5 w-5 ${isOver ? "text-destructive" : "text-muted-foreground"}`} />
+          <h3 className={`font-medium ${isOver ? "text-destructive" : ""}`}>{column.title}</h3>
+        </div>
+        <div className={`text-center py-8 text-sm transition-colors ${
+          isOver ? "text-destructive" : "text-muted-foreground"
+        }`}>
+          <p>Arraste para excluir</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

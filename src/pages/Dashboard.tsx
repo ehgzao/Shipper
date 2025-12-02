@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, RotateCcw, TrendingUp } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,25 +100,6 @@ const Dashboard = () => {
       c.sector?.toLowerCase().includes(query)
     );
   }, [targetCompanies, searchQuery]);
-
-  const handleRestartOnboarding = async () => {
-    if (!user) return;
-    
-    const { error } = await supabase
-      .from("profiles")
-      .update({ onboarding_completed: false })
-      .eq("id", user.id);
-
-    if (error) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setShowOnboarding(true);
-    }
-  };
 
   const fetchData = async () => {
     if (!user) return;
@@ -249,10 +230,6 @@ const Dashboard = () => {
               <span className="font-semibold text-lg">Shipper</span>
             </Link>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={handleRestartOnboarding} className="gap-1">
-                <RotateCcw className="h-4 w-4" />
-                <span className="hidden sm:inline">Refazer Onboarding</span>
-              </Button>
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/stats">
                   <TrendingUp className="h-5 w-5" />
@@ -386,6 +363,7 @@ const Dashboard = () => {
           userId={user.id}
           onSaved={handleOpportunitySaved}
           onDeleted={fetchData}
+          onDuplicate={fetchData}
           profile={profile}
         />
       )}
@@ -408,16 +386,19 @@ const FLAG_IMAGES: Record<string, string> = {
   NL: flagNL,
 };
 
+const countryMap: Record<string, { name: string; code: string }> = {
+  portugal: { name: "Portugal", code: "PT" },
+  brazil: { name: "Brasil", code: "BR" },
+  germany: { name: "Alemanha", code: "DE" },
+  spain: { name: "Espanha", code: "ES" },
+  ireland: { name: "Irlanda", code: "IE" },
+  netherlands: { name: "Holanda", code: "NL" },
+};
+
 const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: CompaniesViewProps) => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const countryMap: Record<string, { name: string; code: string }> = {
-    portugal: { name: "Portugal", code: "PT" },
-    brazil: { name: "Brasil", code: "BR" },
-    germany: { name: "Alemanha", code: "DE" },
-    spain: { name: "Espanha", code: "ES" },
-    ireland: { name: "Irlanda", code: "IE" },
-    netherlands: { name: "Holanda", code: "NL" },
-  };
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const getTypeBadgeColor = (type: string | null) => {
     switch (type) {
@@ -437,7 +418,20 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
     }
   };
 
-  const groupedCompanies = companies.reduce((acc, company) => {
+  // Get unique countries and types
+  const countries = useMemo(() => [...new Set(companies.map(c => c.country))], [companies]);
+  const companyTypes = useMemo(() => [...new Set(companies.map(c => c.company_type).filter(Boolean))], [companies]);
+
+  // Filter companies
+  const filteredCompanies = useMemo(() => {
+    return companies.filter(c => {
+      if (selectedCountry && c.country !== selectedCountry) return false;
+      if (selectedType && c.company_type !== selectedType) return false;
+      return true;
+    });
+  }, [companies, selectedCountry, selectedType]);
+
+  const groupedCompanies = filteredCompanies.reduce((acc, company) => {
     if (!acc[company.country]) {
       acc[company.country] = [];
     }
@@ -459,10 +453,69 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
 
   return (
     <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          Filtros:
+        </div>
+
+        {/* Country filter */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCountry(null)}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              selectedCountry === null
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            Todos países
+          </button>
+          {countries.map((country) => {
+            const info = countryMap[country];
+            const code = info?.code || country.toUpperCase().slice(0, 2);
+            return (
+              <button
+                key={country}
+                onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+                  selectedCountry === country
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted"
+                }`}
+              >
+                {FLAG_IMAGES[code] && (
+                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
+                )}
+                {info?.name || country}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Type filter */}
+        <div className="flex flex-wrap gap-2">
+          {companyTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => setSelectedType(selectedType === type ? null : type)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                selectedType === type
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              {getTypeLabel(type)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Role filter */}
       {targetRoles.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filtrar por cargo:</span>
+          <span className="text-sm text-muted-foreground">Cargo:</span>
           <button
             onClick={() => setSelectedRole(null)}
             className={`px-3 py-1 text-xs rounded-full border transition-colors ${
