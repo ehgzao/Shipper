@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, Plus, X, Snowflake } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, X, Snowflake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import type { Opportunity } from "./OpportunityModal";
 
-const FROZEN_TAG = "🧊 VAGA CONGELADA";
+const FROZEN_TAG = "🧊 FROZEN";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -46,17 +46,17 @@ interface OpportunityCardProps {
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
-  brazil: { flag: flagBR, name: "Brasil" },
-  brasil: { flag: flagBR, name: "Brasil" },
+  brazil: { flag: flagBR, name: "Brazil" },
+  brasil: { flag: flagBR, name: "Brazil" },
   portugal: { flag: flagPT, name: "Portugal" },
-  germany: { flag: flagDE, name: "Alemanha" },
-  alemanha: { flag: flagDE, name: "Alemanha" },
-  spain: { flag: flagES, name: "Espanha" },
-  espanha: { flag: flagES, name: "Espanha" },
-  ireland: { flag: flagIE, name: "Irlanda" },
-  irlanda: { flag: flagIE, name: "Irlanda" },
-  netherlands: { flag: flagNL, name: "Holanda" },
-  holanda: { flag: flagNL, name: "Holanda" },
+  germany: { flag: flagDE, name: "Germany" },
+  alemanha: { flag: flagDE, name: "Germany" },
+  spain: { flag: flagES, name: "Spain" },
+  espanha: { flag: flagES, name: "Spain" },
+  ireland: { flag: flagIE, name: "Ireland" },
+  irlanda: { flag: flagIE, name: "Ireland" },
+  netherlands: { flag: flagNL, name: "Netherlands" },
+  holanda: { flag: flagNL, name: "Netherlands" },
 };
 
 const getCountryFlag = (location: string | null) => {
@@ -75,19 +75,47 @@ const capitalizeFirstLetter = (str: string) => {
 };
 
 const WORK_MODEL_LABELS: Record<string, string> = {
-  remote: "Remoto",
-  hybrid: "Híbrido",
-  onsite: "Presencial",
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "On-site",
 };
 
 const SENIORITY_LABELS: Record<string, string> = {
   entry: "Entry",
-  mid: "Pleno",
-  senior: "Sênior",
+  mid: "Mid",
+  senior: "Senior",
   lead: "Lead",
   principal: "Principal",
-  director: "Diretor",
+  director: "Director",
   vp: "VP",
+};
+
+// Smart tag suggestions based on company/role
+const getSmartTagSuggestions = (opportunity: Opportunity): string[] => {
+  const suggestions: string[] = [];
+  const companyLower = opportunity.company_name.toLowerCase();
+  const roleLower = opportunity.role_title.toLowerCase();
+  
+  // Role-based tags
+  if (roleLower.includes("growth")) suggestions.push("Growth PM");
+  if (roleLower.includes("technical") || roleLower.includes("platform")) suggestions.push("Technical PM");
+  if (roleLower.includes("senior")) suggestions.push("Senior Role");
+  if (roleLower.includes("lead") || roleLower.includes("principal")) suggestions.push("Leadership");
+  if (roleLower.includes("data")) suggestions.push("Data PM");
+  if (roleLower.includes("ai") || roleLower.includes("ml")) suggestions.push("AI/ML");
+  if (roleLower.includes("mobile")) suggestions.push("Mobile");
+  if (roleLower.includes("b2b")) suggestions.push("B2B");
+  if (roleLower.includes("b2c")) suggestions.push("B2C");
+  
+  // Company type tags
+  if (companyLower.includes("google") || companyLower.includes("meta") || companyLower.includes("amazon") || companyLower.includes("microsoft") || companyLower.includes("apple")) {
+    suggestions.push("Big Tech");
+  }
+  
+  // General useful tags
+  suggestions.push("High Priority", "Follow Up", "Referral", "Direct Apply");
+  
+  return suggestions;
 };
 
 export const OpportunityCard = ({ 
@@ -107,6 +135,11 @@ export const OpportunityCard = ({
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [editedRole, setEditedRole] = useState(opportunity.role_title);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Sync editedRole when opportunity changes
+  useEffect(() => {
+    setEditedRole(opportunity.role_title);
+  }, [opportunity.role_title]);
 
   const isFrozen = opportunity.tags?.includes(FROZEN_TAG) || false;
 
@@ -177,6 +210,17 @@ export const OpportunityCard = ({
     }
   };
 
+  const handleRoleBlur = () => {
+    if (editedRole.trim() && editedRole !== opportunity.role_title && onUpdateRole) {
+      onUpdateRole(opportunity.id, editedRole.trim());
+    }
+    setIsEditingRole(false);
+  };
+
+  // Get smart suggestions
+  const smartSuggestions = getSmartTagSuggestions(opportunity);
+  const combinedSuggestions = [...new Set([...smartSuggestions, ...allTags])];
+
   return (
     <>
       <div
@@ -200,10 +244,7 @@ export const OpportunityCard = ({
                       value={editedRole}
                       onChange={(e) => setEditedRole(e.target.value)}
                       onKeyDown={handleRoleSubmit}
-                      onBlur={() => {
-                        setEditedRole(opportunity.role_title);
-                        setIsEditingRole(false);
-                      }}
+                      onBlur={handleRoleBlur}
                       className="h-5 text-xs px-1 py-0"
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
@@ -251,7 +292,7 @@ export const OpportunityCard = ({
                       onClick();
                     }}>
                       <Pencil className="h-4 w-4 mr-2" />
-                      Editar
+                      Edit
                     </DropdownMenuItem>
                     {onDuplicate && (
                       <DropdownMenuItem onClick={(e) => {
@@ -259,7 +300,7 @@ export const OpportunityCard = ({
                         onDuplicate(opportunity);
                       }}>
                         <Copy className="h-4 w-4 mr-2" />
-                        Duplicar
+                        Duplicate
                       </DropdownMenuItem>
                     )}
                     {onFreeze && (
@@ -271,7 +312,7 @@ export const OpportunityCard = ({
                         className="text-blue-500 focus:text-blue-500"
                       >
                         <Snowflake className="h-4 w-4 mr-2" />
-                        {isFrozen ? "Descongelar Vaga" : "🧊 Congelar Vaga"}
+                        {isFrozen ? "Unfreeze Job" : "🧊 Freeze Job"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
@@ -284,7 +325,7 @@ export const OpportunityCard = ({
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
+                        Delete
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -295,7 +336,7 @@ export const OpportunityCard = ({
             <div className="flex flex-wrap gap-1 mt-2">
               {isFrozen && (
                 <Badge className="text-xs bg-blue-100 text-blue-600 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400">
-                  🧊 VAGA CONGELADA
+                  🧊 FROZEN
                 </Badge>
               )}
               {opportunity.seniority_level && (
@@ -319,7 +360,7 @@ export const OpportunityCard = ({
                       setEditingTagIndex(null);
                       setEditedTag("");
                     }}
-                    placeholder="Editar tag..."
+                    placeholder="Edit tag..."
                     className="h-5 w-20 text-xs px-1 py-0"
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
@@ -350,9 +391,9 @@ export const OpportunityCard = ({
                   </Badge>
                 )
               ))}
-              {opportunity.tags && opportunity.tags.length > 2 && (
+              {opportunity.tags && opportunity.tags.filter(t => t !== FROZEN_TAG).length > 2 && (
                 <Badge variant="outline" className="text-xs">
-                  +{opportunity.tags.length - 2}
+                  +{opportunity.tags.filter(t => t !== FROZEN_TAG).length - 2}
                 </Badge>
               )}
               
@@ -367,7 +408,8 @@ export const OpportunityCard = ({
                     setShowTagInput(true);
                   }}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Tag className="h-3 w-3 mr-0.5" />
+                  + TAG
                 </Button>
               )}
               
@@ -384,48 +426,48 @@ export const OpportunityCard = ({
                         setShowTagInput(false);
                       }, 200);
                     }}
-                    placeholder="Nova tag..."
+                    placeholder="New tag..."
                     className="h-5 w-24 text-xs px-1 py-0"
                     autoFocus
                   />
-                  {/* Tag suggestions dropdown */}
-                  {allTags.length > 0 && (
-                    <div className="absolute top-6 left-0 z-50 bg-popover border border-border rounded-md shadow-lg max-h-32 overflow-y-auto min-w-[120px]">
-                      {allTags
-                        .filter(tag => 
-                          !opportunity.tags?.includes(tag) && 
-                          (newTag === "" || tag.toLowerCase().includes(newTag.toLowerCase()))
-                        )
-                        .slice(0, 5)
-                        .map(tag => (
-                          <button
-                            key={tag}
-                            className="w-full px-2 py-1 text-xs text-left hover:bg-muted transition-colors flex items-center gap-1"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              if (onUpdateTags) {
-                                const currentTags = opportunity.tags || [];
-                                onUpdateTags(opportunity.id, [...currentTags, tag]);
-                              }
-                              setNewTag("");
-                              setShowTagInput(false);
-                            }}
-                          >
-                            <Tag className="h-3 w-3 text-muted-foreground" />
-                            {tag}
-                          </button>
-                        ))}
-                      {allTags.filter(tag => 
+                  {/* Smart tag suggestions dropdown */}
+                  <div className="absolute top-6 left-0 z-50 bg-popover border border-border rounded-md shadow-lg max-h-40 overflow-y-auto min-w-[140px]">
+                    {combinedSuggestions
+                      .filter(tag => 
                         !opportunity.tags?.includes(tag) && 
+                        tag !== FROZEN_TAG &&
                         (newTag === "" || tag.toLowerCase().includes(newTag.toLowerCase()))
-                      ).length === 0 && newTag && (
-                        <div className="px-2 py-1 text-xs text-muted-foreground">
-                          Enter para criar "{newTag}"
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      )
+                      .slice(0, 8)
+                      .map(tag => (
+                        <button
+                          key={tag}
+                          className="w-full px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors flex items-center gap-1"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (onUpdateTags) {
+                              const currentTags = opportunity.tags || [];
+                              onUpdateTags(opportunity.id, [...currentTags, tag]);
+                            }
+                            setNewTag("");
+                            setShowTagInput(false);
+                          }}
+                        >
+                          <Tag className="h-3 w-3 text-muted-foreground" />
+                          {tag}
+                        </button>
+                      ))}
+                    {combinedSuggestions.filter(tag => 
+                      !opportunity.tags?.includes(tag) && 
+                      tag !== FROZEN_TAG &&
+                      (newTag === "" || tag.toLowerCase().includes(newTag.toLowerCase()))
+                    ).length === 0 && newTag && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        Press Enter to create "{newTag}"
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -450,7 +492,7 @@ export const OpportunityCard = ({
                 {opportunity.next_action_date && (
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    <span>{new Date(opportunity.next_action_date).toLocaleDateString("pt-BR")}</span>
+                    <span>{new Date(opportunity.next_action_date).toLocaleDateString("en-US")}</span>
                   </div>
                 )}
               </div>
@@ -461,11 +503,17 @@ export const OpportunityCard = ({
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-primary rounded-full"
+                      className={`h-full rounded-full transition-all ${
+                        opportunity.match_score >= 80 
+                          ? "bg-success" 
+                          : opportunity.match_score >= 50 
+                            ? "bg-warning" 
+                            : "bg-destructive"
+                      }`}
                       style={{ width: `${opportunity.match_score}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-primary">{opportunity.match_score}%</span>
+                  <span className="text-xs font-medium">{opportunity.match_score}%</span>
                 </div>
               </div>
             )}
@@ -477,14 +525,14 @@ export const OpportunityCard = ({
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+            <AlertDialogTitle>Delete opportunity?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a oportunidade em <strong>{opportunity.company_name}</strong> ({opportunity.role_title})?
-              Esta ação não pode ser desfeita.
+              Are you sure you want to delete the opportunity at <strong>{opportunity.company_name}</strong> ({opportunity.role_title})?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -494,7 +542,7 @@ export const OpportunityCard = ({
                 setShowDeleteConfirm(false);
               }}
             >
-              Excluir
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

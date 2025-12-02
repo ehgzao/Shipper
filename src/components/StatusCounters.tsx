@@ -13,10 +13,10 @@ export const StatusCounters = ({ opportunities }: StatusCountersProps) => {
   };
 
   const statuses = [
-    { key: "researching", label: "Pesquisando", color: "bg-muted-foreground" },
-    { key: "applied", label: "Candidatado", color: "bg-status-applied" },
-    { key: "interviewing", label: "Entrevistando", color: "bg-status-interviewing" },
-    { key: "offer", label: "Oferta", color: "bg-status-offer" },
+    { key: "researching", label: "Researching", color: "bg-muted-foreground" },
+    { key: "applied", label: "Applied", color: "bg-status-applied" },
+    { key: "interviewing", label: "Interviewing", color: "bg-status-interviewing" },
+    { key: "offer", label: "Offer", color: "bg-status-offer" },
   ];
 
   return (
