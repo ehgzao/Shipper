@@ -43,9 +43,21 @@ interface KanbanBoardProps {
   opportunities: Opportunity[];
   onOpportunityClick: (opportunity: Opportunity) => void;
   onUpdate: () => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (opportunity: Opportunity) => void;
+  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateRole?: (id: string, role: string) => void;
 }
 
-export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: KanbanBoardProps) => {
+export const KanbanBoard = ({ 
+  opportunities, 
+  onOpportunityClick, 
+  onUpdate,
+  onDelete,
+  onDuplicate,
+  onUpdateTags,
+  onUpdateRole
+}: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -156,6 +168,10 @@ export const KanbanBoard = ({ opportunities, onOpportunityClick, onUpdate }: Kan
               opportunities={columnOpportunities}
               onOpportunityClick={onOpportunityClick}
               isDragging={!!activeId}
+              onDelete={onDelete}
+              onDuplicate={onDuplicate}
+              onUpdateTags={onUpdateTags}
+              onUpdateRole={onUpdateRole}
             />
           );
         })}
@@ -180,9 +196,22 @@ interface KanbanColumnProps {
   opportunities: Opportunity[];
   onOpportunityClick: (opportunity: Opportunity) => void;
   isDragging: boolean;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (opportunity: Opportunity) => void;
+  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateRole?: (id: string, role: string) => void;
 }
 
-const KanbanColumn = ({ column, opportunities, onOpportunityClick, isDragging }: KanbanColumnProps) => {
+const KanbanColumn = ({ 
+  column, 
+  opportunities, 
+  onOpportunityClick, 
+  isDragging,
+  onDelete,
+  onDuplicate,
+  onUpdateTags,
+  onUpdateRole
+}: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -261,6 +290,10 @@ const KanbanColumn = ({ column, opportunities, onOpportunityClick, isDragging }:
                 key={opportunity.id}
                 opportunity={opportunity}
                 onClick={() => onOpportunityClick(opportunity)}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
+                onUpdateTags={onUpdateTags}
+                onUpdateRole={onUpdateRole}
               />
             ))
           )}

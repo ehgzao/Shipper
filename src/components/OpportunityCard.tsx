@@ -1,7 +1,17 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Briefcase, Calendar, ExternalLink, GripVertical, Tag } from "lucide-react";
+import { Briefcase, Calendar, ExternalLink, MoreVertical, Pencil, Copy, Trash2, Tag, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import type { Opportunity } from "./OpportunityModal";
 
 // Flag images
@@ -15,6 +25,10 @@ import flagNL from "@/assets/flags/nl.png";
 interface OpportunityCardProps {
   opportunity: Opportunity;
   onClick: () => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (opportunity: Opportunity) => void;
+  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateRole?: (id: string, role: string) => void;
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
@@ -58,7 +72,19 @@ const SENIORITY_LABELS: Record<string, string> = {
   vp: "VP",
 };
 
-export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) => {
+export const OpportunityCard = ({ 
+  opportunity, 
+  onClick, 
+  onDelete, 
+  onDuplicate,
+  onUpdateTags,
+  onUpdateRole 
+}: OpportunityCardProps) => {
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [editedRole, setEditedRole] = useState(opportunity.role_title);
+
   const {
     attributes,
     listeners,
@@ -73,49 +99,154 @@ export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) 
     transition,
   };
 
+  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && newTag.trim() && onUpdateTags) {
+      const currentTags = opportunity.tags || [];
+      if (!currentTags.includes(newTag.trim())) {
+        onUpdateTags(opportunity.id, [...currentTags, newTag.trim()]);
+      }
+      setNewTag("");
+      setShowTagInput(false);
+    }
+    if (e.key === "Escape") {
+      setNewTag("");
+      setShowTagInput(false);
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    if (onUpdateTags) {
+      const currentTags = opportunity.tags || [];
+      onUpdateTags(opportunity.id, currentTags.filter(tag => tag !== tagToRemove));
+    }
+  };
+
+  const handleRoleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && editedRole.trim() && onUpdateRole) {
+      onUpdateRole(opportunity.id, editedRole.trim());
+      setIsEditingRole(false);
+    }
+    if (e.key === "Escape") {
+      setEditedRole(opportunity.role_title);
+      setIsEditingRole(false);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-card border border-border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow ${
+      {...attributes}
+      {...listeners}
+      className={`bg-card border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
         isDragging ? "opacity-50 shadow-lg" : ""
       }`}
-      onClick={onClick}
     >
       <div className="flex items-start gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-        
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h4 className="font-semibold text-sm truncate">{opportunity.company_name}</h4>
               <div className="flex items-center gap-1 text-muted-foreground text-xs mt-0.5">
                 <Briefcase className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{opportunity.role_title}</span>
+                {isEditingRole ? (
+                  <Input
+                    value={editedRole}
+                    onChange={(e) => setEditedRole(e.target.value)}
+                    onKeyDown={handleRoleSubmit}
+                    onBlur={() => {
+                      setEditedRole(opportunity.role_title);
+                      setIsEditingRole(false);
+                    }}
+                    className="h-5 text-xs px-1 py-0"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span 
+                    className="truncate cursor-pointer hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onUpdateRole) setIsEditingRole(true);
+                    }}
+                  >
+                    {opportunity.role_title}
+                  </span>
+                )}
               </div>
             </div>
             
-            {opportunity.job_url && (
-              <a 
-                href={opportunity.job_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
+            <div className="flex items-center gap-1">
+              {opportunity.job_url && (
+                <a 
+                  href={opportunity.job_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary p-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  {onDuplicate && (
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onDuplicate(opportunity);
+                    }}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Duplicar
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {onDelete && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(opportunity.id);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-1 mt-2">
+            {/* Role as editable tag */}
+            <Badge 
+              variant="default" 
+              className="text-xs bg-primary/80 hover:bg-primary cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onUpdateRole) setIsEditingRole(true);
+              }}
+            >
+              {opportunity.role_title}
+            </Badge>
+            
             {opportunity.seniority_level && (
               <Badge variant="secondary" className="text-xs">
                 {SENIORITY_LABELS[opportunity.seniority_level] || opportunity.seniority_level}
@@ -127,15 +258,55 @@ export const OpportunityCard = ({ opportunity, onClick }: OpportunityCardProps) 
               </Badge>
             )}
             {opportunity.tags && opportunity.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="default" className="text-xs bg-primary/20 text-primary hover:bg-primary/30">
+              <Badge 
+                key={tag} 
+                variant="default" 
+                className="text-xs bg-primary/20 text-primary hover:bg-primary/30 cursor-pointer group"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveTag(tag);
+                }}
+              >
                 <Tag className="h-2.5 w-2.5 mr-0.5" />
                 {tag}
+                {onUpdateTags && <span className="ml-1 opacity-0 group-hover:opacity-100">×</span>}
               </Badge>
             ))}
             {opportunity.tags && opportunity.tags.length > 2 && (
               <Badge variant="outline" className="text-xs">
                 +{opportunity.tags.length - 2}
               </Badge>
+            )}
+            
+            {/* Add tag button */}
+            {onUpdateTags && !showTagInput && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTagInput(true);
+                }}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            )}
+            
+            {showTagInput && (
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={handleAddTag}
+                onBlur={() => {
+                  setNewTag("");
+                  setShowTagInput(false);
+                }}
+                placeholder="Nova tag..."
+                className="h-5 w-20 text-xs px-1 py-0"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
             )}
           </div>
 
