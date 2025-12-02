@@ -24,6 +24,7 @@ interface Profile {
   previous_background: string | null;
   strength_orientation: string | null;
   skills: string[] | null;
+  target_roles: string[] | null;
 }
 
 interface PresetCompany {
@@ -189,7 +190,7 @@ const Dashboard = () => {
     fetchData();
   };
 
-  const handleCreateOpportunityFromCompany = async (company: TargetCompany) => {
+  const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
     if (!user) return;
 
     const { error } = await supabase
@@ -197,7 +198,7 @@ const Dashboard = () => {
       .insert({
         user_id: user.id,
         company_name: company.company_name,
-        role_title: "Product Manager",
+        role_title: role || "Product Manager",
         status: "researching",
         location: company.country,
       });
@@ -347,6 +348,7 @@ const Dashboard = () => {
             <CompaniesView 
               companies={filteredTargetCompanies} 
               onCreateOpportunity={handleCreateOpportunityFromCompany}
+              targetRoles={profile?.target_roles || []}
             />
           </TabsContent>
 
@@ -380,10 +382,12 @@ const Dashboard = () => {
 
 interface CompaniesViewProps {
   companies: TargetCompany[];
-  onCreateOpportunity: (company: TargetCompany) => void;
+  onCreateOpportunity: (company: TargetCompany, role?: string) => void;
+  targetRoles: string[];
 }
 
-const CompaniesView = ({ companies, onCreateOpportunity }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: CompaniesViewProps) => {
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const countryMap: Record<string, { name: string; code: string }> = {
     portugal: { name: "Portugal", code: "PT" },
     brazil: { name: "Brasil", code: "BR" },
@@ -432,7 +436,37 @@ const CompaniesView = ({ companies, onCreateOpportunity }: CompaniesViewProps) =
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Role filter */}
+      {targetRoles.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filtrar por cargo:</span>
+          <button
+            onClick={() => setSelectedRole(null)}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              selectedRole === null
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            Todos
+          </button>
+          {targetRoles.map((role) => (
+            <button
+              key={role}
+              onClick={() => setSelectedRole(selectedRole === role ? null : role)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                selectedRole === role
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              {role}
+            </button>
+          ))}
+        </div>
+      )}
+
       {Object.entries(groupedCompanies).map(([country, countryCompanies]) => (
         <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
@@ -458,21 +492,20 @@ const CompaniesView = ({ companies, onCreateOpportunity }: CompaniesViewProps) =
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{company.sector}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {company.careers_url && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild
-                    >
+                    <Button variant="outline" size="sm" asChild>
                       <a href={company.careers_url} target="_blank" rel="noopener noreferrer">
                         Ver Vagas
                       </a>
                     </Button>
                   )}
-                  <Button size="sm" onClick={() => onCreateOpportunity(company)}>
+                  <Button 
+                    size="sm" 
+                    onClick={() => onCreateOpportunity(company, selectedRole || undefined)}
+                  >
                     <Plus className="h-4 w-4 mr-1" />
-                    Criar Oportunidade
+                    {selectedRole ? `Criar ${selectedRole}` : "Criar Oportunidade"}
                   </Button>
                 </div>
               </div>
