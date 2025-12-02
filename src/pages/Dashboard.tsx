@@ -1,6 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -462,6 +472,7 @@ const Dashboard = () => {
           <TabsContent value="companies" className="mt-0">
             <CompaniesView 
               companies={filteredTargetCompanies} 
+              opportunities={opportunities}
               onCreateOpportunity={handleCreateOpportunityFromCompany}
               onDeleteCompany={handleDeleteTargetCompany}
             />
@@ -498,6 +509,7 @@ const Dashboard = () => {
 
 interface CompaniesViewProps {
   companies: TargetCompany[];
+  opportunities: Opportunity[];
   onCreateOpportunity: (company: TargetCompany, role?: string) => void;
   onDeleteCompany: (companyId: string) => void;
 }
@@ -520,9 +532,14 @@ const countryMap: Record<string, { name: string; code: string }> = {
   netherlands: { name: "Holanda", code: "NL" },
 };
 
-const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<TargetCompany | null>(null);
+
+  const getOpportunityCountByCompany = (companyName: string) => {
+    return opportunities.filter(o => o.company_name === companyName).length;
+  };
 
   const getTypeBadgeColor = (type: string | null) => {
     switch (type) {
@@ -658,7 +675,9 @@ const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: Comp
             </h3>
           </div>
           <div className="divide-y divide-border">
-            {countryCompanies.map((company) => (
+            {countryCompanies.map((company) => {
+              const oppCount = getOpportunityCountByCompany(company.company_name);
+              return (
               <div key={company.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
@@ -666,6 +685,11 @@ const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: Comp
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(company.company_type)}`}>
                       {getTypeLabel(company.company_type)}
                     </span>
+                    {oppCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {oppCount} {oppCount === 1 ? "oportunidade" : "oportunidades"}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{company.sector}</p>
                 </div>
@@ -681,7 +705,7 @@ const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: Comp
                     variant="ghost" 
                     size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => onDeleteCompany(company.id)}
+                    onClick={() => setCompanyToDelete(company)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -694,11 +718,43 @@ const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: Comp
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         );
       })}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir empresa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{companyToDelete?.company_name}</strong> da sua lista de empresas alvo?
+              {getOpportunityCountByCompany(companyToDelete?.company_name || "") > 0 && (
+                <span className="block mt-2 text-warning">
+                  Esta empresa possui {getOpportunityCountByCompany(companyToDelete?.company_name || "")} oportunidade(s) associada(s).
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (companyToDelete) {
+                  onDeleteCompany(companyToDelete.id);
+                  setCompanyToDelete(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
