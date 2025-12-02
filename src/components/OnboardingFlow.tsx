@@ -239,10 +239,20 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
     setIsLoading(false);
   };
 
-  // Get companies filtered by selected countries
-  const filteredCompanies = presetCompanies.filter(c => 
-    countryPreferences.some(p => p.country === c.country)
-  );
+  // Map company stages to company_type values from database
+  const stageToTypeMap: Record<string, string> = {
+    startup: "Startup",
+    scaleup: "Scaleup", 
+    tech_giant: "Tech Giant",
+  };
+
+  // Get companies filtered by selected countries AND company types
+  const filteredCompanies = presetCompanies.filter(c => {
+    const matchesCountry = countryPreferences.some(p => p.country === c.country);
+    const matchesType = companyStages.length === 0 || 
+      companyStages.some(stage => stageToTypeMap[stage] === c.company_type);
+    return matchesCountry && matchesType;
+  });
 
   // Group companies by country
   const companiesByCountry = filteredCompanies.reduce((acc, company) => {
