@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus } from "lucide-react";
+import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,10 +109,36 @@ const Settings = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isRestartingOnboarding, setIsRestartingOnboarding] = useState(false);
   
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleRestartOnboarding = async () => {
+    if (!user) return;
+    setIsRestartingOnboarding(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ onboarding_completed: false })
+      .eq("id", user.id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Onboarding reiniciado!",
+        description: "Você será redirecionado para refazer o onboarding.",
+      });
+      navigate("/dashboard");
+    }
+    setIsRestartingOnboarding(false);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -612,6 +638,33 @@ const Settings = () => {
                   ? "✓ Email confirmado" 
                   : "Email não confirmado. Verifique sua caixa de entrada."}
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Restart Onboarding Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5" />
+                Refazer Onboarding
+              </CardTitle>
+              <CardDescription>
+                Reconfigure suas preferências e perfil
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Ao refazer o onboarding, você poderá atualizar suas preferências de países, tipos de empresa, cargos alvo e mais.
+              </p>
+              <Button 
+                onClick={handleRestartOnboarding} 
+                disabled={isRestartingOnboarding}
+                variant="outline"
+                className="w-full gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {isRestartingOnboarding ? "Reiniciando..." : "Refazer Onboarding"}
+              </Button>
             </CardContent>
           </Card>
         </div>
