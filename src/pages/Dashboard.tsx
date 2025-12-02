@@ -62,7 +62,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
-  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all" });
+  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all" });
   const [searchQuery, setSearchQuery] = useState("");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -73,12 +73,22 @@ const Dashboard = () => {
     return [...new Set(opportunities.map(o => o.company_name))].sort();
   }, [opportunities]);
 
+  // Get unique tags for filter
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    opportunities.forEach(o => {
+      if (o.tags) o.tags.forEach(tag => tags.add(tag));
+    });
+    return [...tags].sort();
+  }, [opportunities]);
+
   // Filter opportunities
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(o => {
       if (filters.seniority !== "all" && o.seniority_level !== filters.seniority) return false;
       if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
       if (filters.company !== "all" && o.company_name !== filters.company) return false;
+      if (filters.tag !== "all" && (!o.tags || !o.tags.includes(filters.tag))) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -325,6 +335,7 @@ const Dashboard = () => {
           <TabsContent value="pipeline" className="mt-0">
             <PipelineFilters 
               companies={companyNames}
+              tags={allTags}
               filters={filters}
               onFiltersChange={setFilters}
             />

@@ -1,22 +1,24 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Tag } from "lucide-react";
 
 interface PipelineFiltersProps {
   companies: string[];
+  tags: string[];
   filters: {
     seniority: string;
     workModel: string;
     company: string;
+    tag: string;
   };
-  onFiltersChange: (filters: { seniority: string; workModel: string; company: string }) => void;
+  onFiltersChange: (filters: { seniority: string; workModel: string; company: string; tag: string }) => void;
 }
 
-export const PipelineFilters = ({ companies, filters, onFiltersChange }: PipelineFiltersProps) => {
-  const hasFilters = filters.seniority !== "all" || filters.workModel !== "all" || filters.company !== "all";
+export const PipelineFilters = ({ companies, tags, filters, onFiltersChange }: PipelineFiltersProps) => {
+  const hasFilters = filters.seniority !== "all" || filters.workModel !== "all" || filters.company !== "all" || filters.tag !== "all";
 
   const clearFilters = () => {
-    onFiltersChange({ seniority: "all", workModel: "all", company: "all" });
+    onFiltersChange({ seniority: "all", workModel: "all", company: "all", tag: "all" });
   };
 
   return (
@@ -71,6 +73,26 @@ export const PipelineFilters = ({ companies, filters, onFiltersChange }: Pipelin
           ))}
         </SelectContent>
       </Select>
+
+      {tags.length > 0 && (
+        <Select
+          value={filters.tag}
+          onValueChange={(value) => onFiltersChange({ ...filters, tag: value })}
+        >
+          <SelectTrigger className="w-[150px] bg-background">
+            <Tag className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue placeholder="Tag" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {tags.map((tag) => (
+              <SelectItem key={tag} value={tag}>
+                {tag}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
