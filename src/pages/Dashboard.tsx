@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, RotateCcw } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, RotateCcw, TrendingUp } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -252,6 +252,11 @@ const Dashboard = () => {
               <Button variant="ghost" size="sm" onClick={handleRestartOnboarding} className="gap-1">
                 <RotateCcw className="h-4 w-4" />
                 <span className="hidden sm:inline">Refazer Onboarding</span>
+              </Button>
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/stats">
+                  <TrendingUp className="h-5 w-5" />
+                </Link>
               </Button>
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/settings">
