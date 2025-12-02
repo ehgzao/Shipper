@@ -14,6 +14,7 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { Trash2 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -92,7 +93,9 @@ export const KanbanBoard = ({
 
   const getOpportunitiesByStatus = (status: OpportunityStatus | "trash") => {
     if (status === "trash") return [];
-    return opportunities.filter(o => o.status === status);
+    return opportunities
+      .filter(o => o.status === status)
+      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -129,17 +132,52 @@ export const KanbanBoard = ({
       const targetOpportunity = opportunities.find(o => o.id === overId);
       if (targetOpportunity) {
         targetColumnId = targetOpportunity.status;
+        
+        // Handle reordering within the same column
+        if (opportunity.status === targetColumnId) {
+          const columnOpportunities = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+          const oldIndex = columnOpportunities.findIndex(o => o.id === opportunityId);
+          const newIndex = columnOpportunities.findIndex(o => o.id === overId);
+          
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+            const reordered = arrayMove(columnOpportunities, oldIndex, newIndex);
+            
+            // Update display_order for all affected items
+            const updates = reordered.map((opp, index) => ({
+              id: opp.id,
+              display_order: index,
+            }));
+            
+            // Batch update
+            for (const update of updates) {
+              await supabase
+                .from("opportunities")
+                .update({ display_order: update.display_order })
+                .eq("id", update.id);
+            }
+            
+            onUpdate();
+            return;
+          }
+        }
       }
     }
 
     if (targetColumnId && opportunity.status !== targetColumnId) {
+      // Get the max display_order in the target column
+      const targetColumnOpps = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+      const maxOrder = targetColumnOpps.length > 0 
+        ? Math.max(...targetColumnOpps.map(o => o.display_order || 0)) + 1 
+        : 0;
+
       // Update status in database
       const { error } = await supabase
         .from("opportunities")
         .update({ 
           status: targetColumnId as OpportunityStatus,
           applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          display_order: maxOrder
         })
         .eq("id", opportunityId);
 
