@@ -476,11 +476,21 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
               <div className="space-y-4">
                 {Object.entries(companiesByCountry).map(([country, companies]) => {
                   const countryInfo = COUNTRY_OPTIONS.find(c => c.value === country);
+                  const countryPref = countryPreferences.find(p => p.country === country);
+                  const workModelLabels = countryPref?.workModels.map(wm => 
+                    WORK_MODEL_OPTIONS.find(opt => opt.value === wm)?.label
+                  ).filter(Boolean);
+                  
                   return (
                     <div key={country}>
                       <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
                         <span className="text-xs text-muted-foreground">{countryInfo?.code}</span>
                         {countryInfo?.label}
+                        {workModelLabels && workModelLabels.length > 0 && (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            ({workModelLabels.join(", ")})
+                          </span>
+                        )}
                       </h3>
                       <div className="space-y-1">
                         {companies.map((company) => {
