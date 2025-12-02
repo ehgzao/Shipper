@@ -6,8 +6,9 @@ import { Ship, ArrowLeft, Briefcase, MapPin, TrendingUp, Target, CheckCircle, Cl
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { subDays, subMonths, isAfter, parseISO } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
+import { subDays, subMonths, isAfter, parseISO, format, startOfWeek, startOfMonth, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -24,6 +25,7 @@ interface Opportunity {
   status: string;
   location: string | null;
   created_at: string | null;
+  tags: string[] | null;
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
@@ -103,7 +105,7 @@ const Stats = () => {
 
       const { data } = await supabase
         .from("opportunities")
-        .select("id, company_name, role_title, status, location, created_at")
+        .select("id, company_name, role_title, status, location, created_at, tags")
         .eq("user_id", user.id);
 
       if (data) setOpportunities(data);
@@ -171,6 +173,67 @@ const Stats = () => {
     const offers = filteredOpportunities.filter(o => o.status === "offer").length;
     return { total, applied, interviewing, offers };
   }, [filteredOpportunities]);
+
+  // Tag statistics
+  const tagStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredOpportunities.forEach(o => {
+      if (o.tags && o.tags.length > 0) {
+        o.tags.forEach(tag => {
+          counts[tag] = (counts[tag] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [filteredOpportunities]);
+
+  // Temporal evolution (by week or month depending on date range)
+  const temporalStats = useMemo(() => {
+    if (opportunities.length === 0) return [];
+    
+    const oppsWithDates = opportunities.filter(o => o.created_at);
+    if (oppsWithDates.length === 0) return [];
+    
+    const dates = oppsWithDates.map(o => parseISO(o.created_at!));
+    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+    
+    const daysDiff = (maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24);
+    const useMonths = daysDiff > 60;
+    
+    if (useMonths) {
+      const months = eachMonthOfInterval({ start: minDate, end: maxDate });
+      return months.map(month => {
+        const monthStart = startOfMonth(month);
+        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+        const count = oppsWithDates.filter(o => {
+          const d = parseISO(o.created_at!);
+          return d >= monthStart && d <= monthEnd;
+        }).length;
+        return {
+          period: format(month, "MMM/yy", { locale: ptBR }),
+          total: count,
+        };
+      });
+    } else {
+      const weeks = eachWeekOfInterval({ start: minDate, end: maxDate }, { weekStartsOn: 1 });
+      return weeks.map(week => {
+        const weekStart = startOfWeek(week, { weekStartsOn: 1 });
+        const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+        const count = oppsWithDates.filter(o => {
+          const d = parseISO(o.created_at!);
+          return d >= weekStart && d <= weekEnd;
+        }).length;
+        return {
+          period: format(weekStart, "dd/MM", { locale: ptBR }),
+          total: count,
+        };
+      });
+    }
+  }, [opportunities]);
 
   if (isLoading) {
     return (
@@ -427,6 +490,83 @@ const Stats = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Temporal Evolution */}
+              {temporalStats.length > 0 && (
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Calendar className="h-4 w-4" />
+                      Evolução Temporal
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={temporalStats} margin={{ left: 0, right: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis 
+                          dataKey="period" 
+                          tick={{ fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          allowDecimals={false}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value} oportunidades`, 'Total']}
+                          contentStyle={{ 
+                            background: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="total" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Tags Statistics */}
+              {tagStats.length > 0 && (
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Target className="h-4 w-4" />
+                      Tags Mais Usadas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-3">
+                      {tagStats.map((tag, index) => (
+                        <div 
+                          key={tag.name}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted"
+                        >
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            #{index + 1}
+                          </span>
+                          <span className="text-sm font-medium">{tag.name}</span>
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                            {tag.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
