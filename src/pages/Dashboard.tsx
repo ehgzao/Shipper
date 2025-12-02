@@ -11,6 +11,8 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import { OpportunityModal, type Opportunity } from "@/components/OpportunityModal";
 import { PipelineFilters } from "@/components/PipelineFilters";
 import { PresetCompaniesView } from "@/components/PresetCompaniesView";
+import { SearchInput } from "@/components/SearchInput";
+import { StatusCounters } from "@/components/StatusCounters";
 
 interface Profile {
   id: string;
@@ -47,6 +49,7 @@ const Dashboard = () => {
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all" });
+  const [searchQuery, setSearchQuery] = useState("");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,9 +65,27 @@ const Dashboard = () => {
       if (filters.seniority !== "all" && o.seniority_level !== filters.seniority) return false;
       if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
       if (filters.company !== "all" && o.company_name !== filters.company) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          o.company_name.toLowerCase().includes(query) ||
+          o.role_title.toLowerCase().includes(query) ||
+          o.location?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
       return true;
     });
-  }, [opportunities, filters]);
+  }, [opportunities, filters, searchQuery]);
+
+  // Filter target companies by search
+  const filteredTargetCompanies = useMemo(() => {
+    if (!searchQuery) return targetCompanies;
+    const query = searchQuery.toLowerCase();
+    return targetCompanies.filter(c => 
+      c.company_name.toLowerCase().includes(query) ||
+      c.sector?.toLowerCase().includes(query)
+    );
+  }, [targetCompanies, searchQuery]);
 
   const handleRestartOnboarding = async () => {
     if (!user) return;
@@ -256,6 +277,22 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="container-wide py-6">
+        {/* Status Counters */}
+        {opportunities.length > 0 && (
+          <div className="mb-4">
+            <StatusCounters opportunities={opportunities} />
+          </div>
+        )}
+
+        {/* Search */}
+        <div className="mb-4 max-w-md">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar empresas, cargos..."
+          />
+        </div>
+
         <Tabs defaultValue="pipeline" className="w-full">
           <div className="flex items-center justify-between mb-6">
             <TabsList className="bg-background border border-border">
@@ -303,7 +340,7 @@ const Dashboard = () => {
           
           <TabsContent value="companies" className="mt-0">
             <CompaniesView 
-              companies={targetCompanies} 
+              companies={filteredTargetCompanies} 
               onCreateOpportunity={handleCreateOpportunityFromCompany}
             />
           </TabsContent>
@@ -328,6 +365,7 @@ const Dashboard = () => {
           opportunity={selectedOpportunity}
           userId={user.id}
           onSaved={handleOpportunitySaved}
+          onDeleted={fetchData}
         />
       )}
     </div>
