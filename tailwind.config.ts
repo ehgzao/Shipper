@@ -77,6 +77,11 @@ export default {
           ghosted: "hsl(var(--status-ghosted))",
           withdrawn: "hsl(var(--status-withdrawn))",
         },
+        borderColor: {
+          'status-applied': "hsl(var(--status-applied))",
+          'status-interviewing': "hsl(var(--status-interviewing))",
+          'status-offer': "hsl(var(--status-offer))",
+        },
         badge: {
           "tech-giant": "hsl(var(--badge-tech-giant))",
           scaleup: "hsl(var(--badge-scaleup))",

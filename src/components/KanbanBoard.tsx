@@ -39,15 +39,16 @@ interface KanbanColumn {
   id: OpportunityStatus | "trash";
   title: string;
   color: string;
+  borderColor: string;
   isTrash?: boolean;
 }
 
 const COLUMNS: KanbanColumn[] = [
-  { id: "researching", title: "Pesquisando", color: "bg-muted-foreground" },
-  { id: "applied", title: "Candidatado", color: "bg-status-applied" },
-  { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing" },
-  { id: "offer", title: "Oferta", color: "bg-status-offer" },
-  { id: "trash", title: "Lixeira", color: "bg-destructive", isTrash: true },
+  { id: "researching", title: "Pesquisando", color: "bg-muted-foreground", borderColor: "border-muted-foreground" },
+  { id: "applied", title: "Candidatado", color: "bg-status-applied", borderColor: "border-status-applied" },
+  { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing", borderColor: "border-status-interviewing" },
+  { id: "offer", title: "Oferta", color: "bg-status-offer", borderColor: "border-status-offer" },
+  { id: "trash", title: "Lixeira", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
 ];
 
 interface KanbanBoardProps {
@@ -237,7 +238,7 @@ export const KanbanBoard = ({
 
         <DragOverlay>
           {activeOpportunity ? (
-            <div className="opacity-80">
+            <div className="opacity-90 rotate-2 scale-105 shadow-2xl">
               <OpportunityCard 
                 opportunity={activeOpportunity} 
                 onClick={() => {}} 
@@ -342,13 +343,21 @@ const KanbanColumn = ({
   return (
     <div 
       ref={setNodeRef}
-      className={`bg-background rounded-xl border border-border p-4 min-h-[300px] transition-colors ${
-        isOver ? "border-primary bg-primary/5" : ""
+      className={`bg-background rounded-xl border-2 p-4 min-h-[300px] transition-all duration-300 ease-out ${
+        isOver 
+          ? `${column.borderColor} scale-[1.02] shadow-lg` 
+          : isDragging
+            ? `border-dashed ${column.borderColor}/50`
+            : "border-border"
       }`}
     >
       <div className="flex items-center gap-2 mb-4">
-        <div className={`w-3 h-3 rounded-full ${column.color}`} />
-        <h3 className="font-medium">{column.title}</h3>
+        <div className={`w-3 h-3 rounded-full ${column.color} transition-transform duration-300 ${
+          isOver ? "scale-150" : isDragging ? "scale-125 animate-pulse" : ""
+        }`} />
+        <h3 className={`font-medium transition-all duration-300 ${isOver ? "scale-105" : ""}`}>
+          {column.title}
+        </h3>
         <span className="text-muted-foreground text-sm ml-auto">
           {opportunities.length}
         </span>
@@ -361,24 +370,29 @@ const KanbanColumn = ({
       >
         <div className="space-y-2 min-h-[200px]">
           {opportunities.length === 0 ? (
-            <div className={`text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg transition-colors ${
-              isOver ? "border-primary bg-primary/5" : "border-border"
+            <div className={`text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg transition-all duration-300 ${
+              isOver ? `${column.borderColor} scale-105` : "border-border"
             }`}>
-              <p>Nenhuma oportunidade</p>
-              <p className="text-xs mt-1">Arraste cards para cá</p>
+              <p>{isOver ? "Solte aqui!" : "Nenhuma oportunidade"}</p>
+              <p className="text-xs mt-1">{isOver ? "" : "Arraste cards para cá"}</p>
             </div>
           ) : (
-            opportunities.map((opportunity) => (
-              <OpportunityCard
+            opportunities.map((opportunity, index) => (
+              <div 
                 key={opportunity.id}
-                opportunity={opportunity}
-                onClick={() => onOpportunityClick(opportunity)}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-                onUpdateTags={onUpdateTags}
-                onUpdateRole={onUpdateRole}
-                allTags={allTags}
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <OpportunityCard
+                  opportunity={opportunity}
+                  onClick={() => onOpportunityClick(opportunity)}
+                  onDelete={onDelete}
+                  onDuplicate={onDuplicate}
+                  onUpdateTags={onUpdateTags}
+                  onUpdateRole={onUpdateRole}
+                  allTags={allTags}
+                />
+              </div>
             ))
           )}
         </div>

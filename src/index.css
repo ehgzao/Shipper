@@ -1,4 +1,11 @@
 @tailwind base;
+
+/* Status colors as CSS variables */
+:root {
+  --status-applied: 217 91% 60%;
+  --status-interviewing: 271 91% 65%;
+  --status-offer: 142 71% 45%;
+}
 @tailwind components;
 @tailwind utilities;
 
