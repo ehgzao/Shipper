@@ -268,9 +268,9 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
 
   // Map company stages to company_type values from database
   const stageToTypeMap: Record<string, string> = {
-    startup: "Startup",
-    scaleup: "Scaleup", 
-    tech_giant: "Tech Giant",
+    startup: "startup",
+    scaleup: "scaleup", 
+    tech_giant: "tech_giant",
   };
 
   // Get companies filtered by selected countries AND company types
