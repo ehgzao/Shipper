@@ -41,13 +41,16 @@ interface KanbanColumn {
   color: string;
   borderColor: string;
   isTrash?: boolean;
+  dragHint?: string;
 }
 
 const COLUMNS: KanbanColumn[] = [
-  { id: "researching", title: "Pesquisando", color: "bg-muted-foreground", borderColor: "border-muted-foreground" },
-  { id: "applied", title: "Candidatado", color: "bg-status-applied", borderColor: "border-status-applied" },
-  { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing", borderColor: "border-status-interviewing" },
-  { id: "offer", title: "Oferta", color: "bg-status-offer", borderColor: "border-status-offer" },
+  { id: "researching", title: "Pesquisando", color: "bg-muted-foreground", borderColor: "border-muted-foreground", dragHint: "Pesquisando vagas? Arraste cards para cá" },
+  { id: "applied", title: "Candidatado", color: "bg-status-applied", borderColor: "border-status-applied", dragHint: "Se inscreveu em uma vaga? Arraste card para cá" },
+  { id: "interviewing", title: "Entrevistando", color: "bg-status-interviewing", borderColor: "border-status-interviewing", dragHint: "Agendou uma entrevista? Arraste card para cá" },
+  { id: "technical_test", title: "Teste Técnico", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Recebeu um teste técnico? Arraste card para cá" },
+  { id: "final_interview", title: "Entrevista Final", color: "bg-pink-500", borderColor: "border-pink-500", dragHint: "Avançou para entrevista final? Arraste card para cá" },
+  { id: "offer", title: "Oferta", color: "bg-status-offer", borderColor: "border-status-offer", dragHint: "Recebeu uma oferta? Parabéns! Arraste card para cá 🎉" },
   { id: "trash", title: "Lixeira", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
 ];
 
@@ -59,6 +62,7 @@ interface KanbanBoardProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
 }
 
@@ -70,6 +74,7 @@ export const KanbanBoard = ({
   onDuplicate,
   onUpdateTags,
   onUpdateRole,
+  onFreeze,
   allTags
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -133,7 +138,8 @@ export const KanbanBoard = ({
         .from("opportunities")
         .update({ 
           status: targetColumnId as OpportunityStatus,
-          applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at
+          applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at,
+          updated_at: new Date().toISOString()
         })
         .eq("id", opportunityId);
 
@@ -215,7 +221,7 @@ export const KanbanBoard = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
           {COLUMNS.map((column) => {
             const columnOpportunities = getOpportunitiesByStatus(column.id);
             
@@ -230,6 +236,7 @@ export const KanbanBoard = ({
                 onDuplicate={onDuplicate}
                 onUpdateTags={onUpdateTags}
                 onUpdateRole={onUpdateRole}
+                onFreeze={onFreeze}
                 allTags={allTags}
               />
             );
@@ -282,6 +289,7 @@ interface KanbanColumnProps {
   onDuplicate?: (opportunity: Opportunity) => void;
   onUpdateTags?: (id: string, tags: string[]) => void;
   onUpdateRole?: (id: string, role: string) => void;
+  onFreeze?: (id: string, frozen: boolean) => void;
   allTags?: string[];
 }
 
@@ -294,45 +302,46 @@ const KanbanColumn = ({
   onDuplicate,
   onUpdateTags,
   onUpdateRole,
+  onFreeze,
   allTags
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
 
-  // Trash column styling with enhanced animation
+  // Trash column styling
   if (column.isTrash) {
     return (
       <div 
         ref={setNodeRef}
-        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-300 ${
+        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-200 ${
           isOver 
-            ? "border-destructive bg-destructive/20 scale-105 shadow-lg shadow-destructive/20" 
+            ? "border-destructive bg-destructive/10 scale-[1.02] shadow-lg" 
             : isDragging 
-              ? "border-destructive/50 bg-destructive/5 animate-pulse" 
+              ? "border-destructive/60" 
               : "border-border"
         }`}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Trash2 className={`h-5 w-5 transition-all duration-300 ${
-            isOver ? "text-destructive scale-125 animate-bounce" : "text-muted-foreground"
+          <Trash2 className={`h-5 w-5 transition-colors duration-200 ${
+            isOver ? "text-destructive" : "text-muted-foreground"
           }`} />
-          <h3 className={`font-medium transition-colors duration-300 ${isOver ? "text-destructive" : ""}`}>
+          <h3 className={`font-medium transition-colors duration-200 ${isOver ? "text-destructive" : ""}`}>
             {column.title}
           </h3>
         </div>
-        <div className={`flex flex-col items-center justify-center py-8 text-sm transition-all duration-300 ${
-          isOver ? "text-destructive scale-110" : "text-muted-foreground"
+        <div className={`flex flex-col items-center justify-center py-8 text-sm transition-colors duration-200 ${
+          isOver ? "text-destructive" : "text-muted-foreground"
         }`}>
-          <Trash2 className={`h-12 w-12 mb-2 transition-all duration-300 ${
-            isOver ? "text-destructive animate-bounce" : "text-muted-foreground/30"
+          <Trash2 className={`h-12 w-12 mb-2 transition-colors duration-200 ${
+            isOver ? "text-destructive" : "text-muted-foreground/30"
           }`} />
           <p className="font-medium">
             {isOver ? "Solte para excluir!" : "Arraste para excluir"}
           </p>
           {isOver && (
-            <p className="text-xs mt-1 animate-pulse">
-              ⚠️ Você precisará confirmar a exclusão
+            <p className="text-xs mt-1">
+              ⚠️ Você precisará confirmar
             </p>
           )}
         </div>
@@ -343,22 +352,18 @@ const KanbanColumn = ({
   return (
     <div 
       ref={setNodeRef}
-      className={`bg-background rounded-xl border-2 p-4 min-h-[300px] transition-all duration-300 ease-out ${
+      className={`bg-background rounded-xl border-2 p-3 min-h-[300px] transition-all duration-200 ${
         isOver 
           ? `${column.borderColor} scale-[1.02] shadow-lg` 
           : isDragging
-            ? `border-dashed ${column.borderColor}/50`
+            ? `${column.borderColor}`
             : "border-border"
       }`}
     >
-      <div className="flex items-center gap-2 mb-4">
-        <div className={`w-3 h-3 rounded-full ${column.color} transition-transform duration-300 ${
-          isOver ? "scale-150" : isDragging ? "scale-125 animate-pulse" : ""
-        }`} />
-        <h3 className={`font-medium transition-all duration-300 ${isOver ? "scale-105" : ""}`}>
-          {column.title}
-        </h3>
-        <span className="text-muted-foreground text-sm ml-auto">
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-3 h-3 rounded-full ${column.color}`} />
+        <h3 className="font-medium text-sm">{column.title}</h3>
+        <span className="text-muted-foreground text-xs ml-auto">
           {opportunities.length}
         </span>
       </div>
@@ -370,11 +375,11 @@ const KanbanColumn = ({
       >
         <div className="space-y-2 min-h-[200px]">
           {opportunities.length === 0 ? (
-            <div className={`text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg transition-all duration-300 ${
-              isOver ? `${column.borderColor} scale-105` : "border-border"
+            <div className={`text-center py-6 text-muted-foreground text-xs border-2 border-dashed rounded-lg transition-all duration-200 ${
+              isOver ? `${column.borderColor}` : "border-border"
             }`}>
-              <p>{isOver ? "Solte aqui!" : "Nenhuma oportunidade"}</p>
-              <p className="text-xs mt-1">{isOver ? "" : "Arraste cards para cá"}</p>
+              <p className="font-medium">{isOver ? "Solte aqui!" : "Nenhuma oportunidade"}</p>
+              <p className="mt-1 px-2">{isDragging && column.dragHint ? column.dragHint : "Arraste cards para cá"}</p>
             </div>
           ) : (
             opportunities.map((opportunity, index) => (
@@ -390,6 +395,7 @@ const KanbanColumn = ({
                   onDuplicate={onDuplicate}
                   onUpdateTags={onUpdateTags}
                   onUpdateRole={onUpdateRole}
+                  onFreeze={onFreeze}
                   allTags={allTags}
                 />
               </div>

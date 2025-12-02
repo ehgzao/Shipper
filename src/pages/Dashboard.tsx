@@ -299,6 +299,71 @@ const Dashboard = () => {
     }
   };
 
+  const FROZEN_TAG = "🧊 VAGA CONGELADA";
+
+  const handleFreezeOpportunity = async (id: string, frozen: boolean) => {
+    const opportunity = opportunities.find(o => o.id === id);
+    if (!opportunity) return;
+
+    const currentTags = opportunity.tags || [];
+    let newTags: string[];
+
+    if (frozen) {
+      // Add frozen tag
+      newTags = currentTags.includes(FROZEN_TAG) ? currentTags : [...currentTags, FROZEN_TAG];
+    } else {
+      // Remove frozen tag
+      newTags = currentTags.filter(t => t !== FROZEN_TAG);
+    }
+
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ tags: newTags })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: frozen ? "🧊 Vaga congelada" : "Vaga descongelada",
+        description: frozen 
+          ? `${opportunity.company_name} foi congelada.` 
+          : `${opportunity.company_name} foi descongelada.`,
+      });
+      fetchData();
+    }
+  };
+
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const handleClearFunnel = async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao limpar funil",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Funil limpo",
+        description: "Todas as oportunidades foram removidas.",
+      });
+      fetchData();
+    }
+    setShowClearConfirm(false);
+  };
+
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
     if (!user) return;
 
@@ -456,10 +521,22 @@ const Dashboard = () => {
                 Database
               </TabsTrigger>
             </TabsList>
-            <Button className="gap-2" onClick={handleNewOpportunity}>
-              <Plus className="h-4 w-4" />
-              Nova Oportunidade
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button className="gap-2" onClick={handleNewOpportunity}>
+                <Plus className="h-4 w-4" />
+                Nova Oportunidade
+              </Button>
+              {opportunities.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => setShowClearConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Limpar Funil
+                </Button>
+              )}
+            </div>
           </div>
 
           <TabsContent value="pipeline" className="mt-0">
@@ -482,6 +559,7 @@ const Dashboard = () => {
               onDuplicate={handleDuplicateOpportunity}
               onUpdateTags={handleUpdateOpportunityTags}
               onUpdateRole={handleUpdateOpportunityRole}
+              onFreeze={handleFreezeOpportunity}
               allTags={allTags}
             />
           </TabsContent>
@@ -520,6 +598,28 @@ const Dashboard = () => {
           profile={profile}
         />
       )}
+
+      {/* Clear Funnel Confirmation Dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar todo o funil?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>todas as {opportunities.length} oportunidades</strong> do seu pipeline?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleClearFunnel}
+            >
+              Limpar Tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

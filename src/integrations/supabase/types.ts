@@ -267,6 +267,8 @@ export type Database = {
         | "rejected"
         | "ghosted"
         | "withdrawn"
+        | "technical_test"
+        | "final_interview"
       seniority_level:
         | "entry"
         | "mid"
@@ -422,6 +424,8 @@ export const Constants = {
         "rejected",
         "ghosted",
         "withdrawn",
+        "technical_test",
+        "final_interview",
       ],
       seniority_level: [
         "entry",
