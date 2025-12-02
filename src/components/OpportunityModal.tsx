@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Trash2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
@@ -41,6 +43,7 @@ interface OpportunityModalProps {
   opportunity?: Opportunity | null;
   userId: string;
   onSaved: () => void;
+  onDeleted?: () => void;
 }
 
 const SENIORITY_OPTIONS: { value: SeniorityLevel; label: string }[] = [
@@ -74,9 +77,11 @@ export const OpportunityModal = ({
   onOpenChange, 
   opportunity, 
   userId, 
-  onSaved 
+  onSaved,
+  onDeleted 
 }: OpportunityModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
   // Form state
@@ -192,6 +197,32 @@ export const OpportunityModal = ({
     }
 
     setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!opportunity) return;
+    setIsDeleting(true);
+
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .eq("id", opportunity.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao deletar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Oportunidade deletada",
+        description: `${opportunity.company_name} foi removida.`,
+      });
+      onDeleted?.();
+      onOpenChange(false);
+    }
+    setIsDeleting(false);
   };
 
   const isEditing = !!opportunity;
@@ -367,7 +398,31 @@ export const OpportunityModal = ({
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {isEditing && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive" className="gap-1 sm:mr-auto">
+                    <Trash2 className="h-4 w-4" />
+                    Deletar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Deletar oportunidade?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja deletar a oportunidade em {opportunity?.company_name}? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                      {isDeleting ? "Deletando..." : "Deletar"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
