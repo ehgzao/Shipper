@@ -19,6 +19,11 @@ interface Profile {
   full_name: string | null;
   email: string | null;
   onboarding_completed: boolean;
+  years_experience_total: number | null;
+  years_experience_product: number | null;
+  previous_background: string | null;
+  strength_orientation: string | null;
+  skills: string[] | null;
 }
 
 interface PresetCompany {
@@ -366,6 +371,7 @@ const Dashboard = () => {
           userId={user.id}
           onSaved={handleOpportunitySaved}
           onDeleted={fetchData}
+          profile={profile}
         />
       )}
     </div>
