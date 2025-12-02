@@ -67,6 +67,10 @@ const getCountryFlag = (location: string | null) => {
   return null;
 };
 
+const capitalizeFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
 const WORK_MODEL_LABELS: Record<string, string> = {
   remote: "Remoto",
   hybrid: "Híbrido",
@@ -271,18 +275,6 @@ export const OpportunityCard = ({
             </div>
 
             <div className="flex flex-wrap gap-1 mt-2">
-              {/* Role as editable tag */}
-              <Badge 
-                variant="default" 
-                className="text-xs bg-primary/80 hover:bg-primary cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onUpdateRole) setIsEditingRole(true);
-                }}
-              >
-                {opportunity.role_title}
-              </Badge>
-              
               {opportunity.seniority_level && (
                 <Badge variant="secondary" className="text-xs">
                   {SENIORITY_LABELS[opportunity.seniority_level] || opportunity.seniority_level}
@@ -429,7 +421,7 @@ export const OpportunityCard = ({
                         />
                       ) : null;
                     })()}
-                    <span className="truncate max-w-20">{opportunity.location}</span>
+                    <span className="truncate max-w-20">{capitalizeFirstLetter(opportunity.location)}</span>
                   </div>
                 )}
                 {opportunity.next_action_date && (

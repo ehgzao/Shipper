@@ -21,6 +21,16 @@ import { useToast } from "@/hooks/use-toast";
 import { OpportunityCard } from "./OpportunityCard";
 import type { Opportunity } from "./OpportunityModal";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
 
@@ -61,6 +71,7 @@ export const KanbanBoard = ({
   allTags
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -90,62 +101,79 @@ export const KanbanBoard = ({
     const opportunityId = active.id as string;
     const overId = over.id as string;
 
+    // Find the opportunity being dragged
+    const opportunity = opportunities.find(o => o.id === opportunityId);
+    if (!opportunity) return;
+
     // Check if dropped on trash
     if (overId === "trash") {
-      const opportunity = opportunities.find(o => o.id === opportunityId);
-      if (opportunity) {
-        const { error } = await supabase
-          .from("opportunities")
-          .delete()
-          .eq("id", opportunityId);
-
-        if (error) {
-          toast({
-            title: "Erro ao excluir",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Oportunidade excluída",
-            description: `${opportunity.company_name} foi removida.`,
-          });
-          onUpdate();
-        }
-      }
+      setPendingTrashOpportunity(opportunity);
       return;
     }
 
-    // Check if dropped on a column
+    // Check if dropped on a column directly
+    let targetColumnId: string | null = null;
     const targetColumn = COLUMNS.find(col => col.id === overId);
     
     if (targetColumn && !targetColumn.isTrash) {
-      const opportunity = opportunities.find(o => o.id === opportunityId);
-      if (opportunity && opportunity.status !== targetColumn.id) {
-        // Update status in database
-        const { error } = await supabase
-          .from("opportunities")
-          .update({ 
-            status: targetColumn.id as OpportunityStatus,
-            applied_at: targetColumn.id === "applied" ? new Date().toISOString() : opportunity.applied_at
-          })
-          .eq("id", opportunityId);
-
-        if (error) {
-          toast({
-            title: "Erro ao atualizar",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Status atualizado",
-            description: `Movido para ${targetColumn.title}`,
-          });
-          onUpdate();
-        }
+      targetColumnId = targetColumn.id;
+    } else {
+      // Check if dropped on another opportunity card - find which column it belongs to
+      const targetOpportunity = opportunities.find(o => o.id === overId);
+      if (targetOpportunity) {
+        targetColumnId = targetOpportunity.status;
       }
     }
+
+    if (targetColumnId && opportunity.status !== targetColumnId) {
+      // Update status in database
+      const { error } = await supabase
+        .from("opportunities")
+        .update({ 
+          status: targetColumnId as OpportunityStatus,
+          applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at
+        })
+        .eq("id", opportunityId);
+
+      if (error) {
+        toast({
+          title: "Erro ao atualizar",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        const targetColumnTitle = COLUMNS.find(c => c.id === targetColumnId)?.title;
+        toast({
+          title: "Status atualizado",
+          description: `Movido para ${targetColumnTitle}`,
+        });
+        onUpdate();
+      }
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingTrashOpportunity) return;
+
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .eq("id", pendingTrashOpportunity.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Oportunidade excluída",
+        description: `${pendingTrashOpportunity.company_name} foi removida.`,
+      });
+      onUpdate();
+    }
+    setPendingTrashOpportunity(null);
   };
 
   const activeOpportunity = activeId 
@@ -153,44 +181,68 @@ export const KanbanBoard = ({
     : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {COLUMNS.map((column) => {
-          const columnOpportunities = getOpportunitiesByStatus(column.id);
-          
-          return (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              opportunities={columnOpportunities}
-              onOpportunityClick={onOpportunityClick}
-              isDragging={!!activeId}
-              onDelete={onDelete}
-              onDuplicate={onDuplicate}
-              onUpdateTags={onUpdateTags}
-              onUpdateRole={onUpdateRole}
-              allTags={allTags}
-            />
-          );
-        })}
-      </div>
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {COLUMNS.map((column) => {
+            const columnOpportunities = getOpportunitiesByStatus(column.id);
+            
+            return (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                opportunities={columnOpportunities}
+                onOpportunityClick={onOpportunityClick}
+                isDragging={!!activeId}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
+                onUpdateTags={onUpdateTags}
+                onUpdateRole={onUpdateRole}
+                allTags={allTags}
+              />
+            );
+          })}
+        </div>
 
-      <DragOverlay>
-        {activeOpportunity ? (
-          <div className="opacity-80">
-            <OpportunityCard 
-              opportunity={activeOpportunity} 
-              onClick={() => {}} 
-            />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeOpportunity ? (
+            <div className="opacity-80">
+              <OpportunityCard 
+                opportunity={activeOpportunity} 
+                onClick={() => {}} 
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Trash Confirmation Dialog */}
+      <AlertDialog open={!!pendingTrashOpportunity} onOpenChange={(open) => !open && setPendingTrashOpportunity(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a oportunidade em <strong>{pendingTrashOpportunity?.company_name}</strong> ({pendingTrashOpportunity?.role_title})?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
@@ -206,7 +258,7 @@ interface KanbanColumnProps {
   allTags?: string[];
 }
 
-const KanbanColumn = ({
+const KanbanColumn = ({ 
   column, 
   opportunities, 
   onOpportunityClick, 
@@ -253,7 +305,7 @@ const KanbanColumn = ({
           </p>
           {isOver && (
             <p className="text-xs mt-1 animate-pulse">
-              ⚠️ Esta ação não pode ser desfeita
+              ⚠️ Você precisará confirmar a exclusão
             </p>
           )}
         </div>
