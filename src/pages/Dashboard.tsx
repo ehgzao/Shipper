@@ -364,6 +364,29 @@ const Dashboard = () => {
     setShowClearConfirm(false);
   };
 
+  const handleClearTargetCompanies = async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("target_companies")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao limpar empresas",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Empresas removidas",
+        description: "Todas as empresas alvo foram removidas.",
+      });
+      fetchData();
+    }
+  };
+
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
     if (!user) return;
 
@@ -570,6 +593,8 @@ const Dashboard = () => {
               opportunities={opportunities}
               onCreateOpportunity={handleCreateOpportunityFromCompany}
               onDeleteCompany={handleDeleteTargetCompany}
+              onClearAllCompanies={handleClearTargetCompanies}
+              totalCompaniesCount={targetCompanies.length}
             />
           </TabsContent>
 
@@ -629,6 +654,8 @@ interface CompaniesViewProps {
   opportunities: Opportunity[];
   onCreateOpportunity: (company: TargetCompany, role?: string) => void;
   onDeleteCompany: (companyId: string) => void;
+  onClearAllCompanies: () => void;
+  totalCompaniesCount: number;
 }
 
 const FLAG_IMAGES: Record<string, string> = {
@@ -649,10 +676,11 @@ const countryMap: Record<string, { name: string; code: string }> = {
   netherlands: { name: "Holanda", code: "NL" },
 };
 
-const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany, onClearAllCompanies, totalCompaniesCount }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<TargetCompany | null>(null);
+  const [showClearCompaniesConfirm, setShowClearCompaniesConfirm] = useState(false);
 
   const getOpportunityCountByCompany = (companyName: string) => {
     return opportunities.filter(o => o.company_name === companyName).length;
@@ -768,6 +796,19 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
             </button>
           ))}
         </div>
+
+        {/* Clear all button */}
+        {totalCompaniesCount > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="gap-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground ml-auto"
+            onClick={() => setShowClearCompaniesConfirm(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Limpar Empresas Alvo
+          </Button>
+        )}
       </div>
 
 
@@ -868,6 +909,31 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
               }}
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear All Companies Confirmation Dialog */}
+      <AlertDialog open={showClearCompaniesConfirm} onOpenChange={setShowClearCompaniesConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar todas as empresas alvo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>todas as {totalCompaniesCount} empresas</strong> da sua lista?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onClearAllCompanies();
+                setShowClearCompaniesConfirm(false);
+              }}
+            >
+              Limpar Tudo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
