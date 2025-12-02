@@ -2,10 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Ship, Target, BarChart3, Sparkles, Check, ArrowRight, Users, Globe, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import featureTargetList from "@/assets/feature-target-list.png";
-import featurePipeline from "@/assets/feature-pipeline.png";
-import featureMatchScore from "@/assets/feature-match-score.png";
-import featureAiCoach from "@/assets/feature-ai-coach.png";
+import featureTargetListReal from "@/assets/feature-target-list-real.png";
+import featureMatchAiReal from "@/assets/feature-match-ai-real.png";
 
 const Landing = () => {
   return (
@@ -90,32 +88,64 @@ const Landing = () => {
           <p className="text-muted-foreground text-center mb-16 max-w-2xl mx-auto">
             Fewer applications. Better applications. Real results.
           </p>
-          <div className="space-y-16">
-            {[
-              { icon: Target, title: "Curated Target List", desc: "Build your dream list, not a spray list. Start with 60 pre-selected companies across 6 countries (Portugal, Brazil, Germany, Spain, Ireland, Netherlands) or add your own.", image: featureTargetList },
-              { icon: BarChart3, title: "Smart Pipeline", desc: "Track with intention, not anxiety. A clean Kanban board to track your applications from research to offer.", image: featurePipeline },
-              { icon: Crosshair, title: "Match Scoring", desc: "Know your fit before you apply. Our matching system analyzes your profile against each role—skills, seniority, experience.", image: featureMatchScore },
-              { icon: Sparkles, title: "AI Coach", desc: "Suggestions, not substitutions. Get personalized tips for each application. You stay authentic.", image: featureAiCoach },
-            ].map((item, i) => (
-              <div key={i} className={`flex flex-col md:flex-row gap-8 items-center ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-                <div className="flex-1 animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
+          <div className="space-y-24">
+            {/* Feature 1: Target List + Pipeline */}
+            <div className="flex flex-col lg:flex-row gap-12 items-center">
+              <div className="flex-1 space-y-8">
+                <div className="animate-fade-up">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
-                    <item.icon className="h-6 w-6" />
+                    <Target className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold text-2xl mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground">{item.desc}</p>
+                  <h3 className="font-semibold text-2xl mb-3">Curated Target List</h3>
+                  <p className="text-muted-foreground">Build your dream list, not a spray list. Start with 60 pre-selected companies across 6 countries (Portugal, Brazil, Germany, Spain, Ireland, Netherlands) or add your own.</p>
                 </div>
-                <div className="flex-1">
-                  <div className="rounded-xl overflow-hidden shadow-lg border border-border/50">
-                    <img 
-                      src={item.image} 
-                      alt={item.title}
-                      className="w-full h-auto object-cover"
-                    />
+                <div className="animate-fade-up" style={{ animationDelay: '100ms' }}>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
+                    <BarChart3 className="h-6 w-6" />
                   </div>
+                  <h3 className="font-semibold text-2xl mb-3">Smart Pipeline</h3>
+                  <p className="text-muted-foreground">Track with intention, not anxiety. A clean Kanban board to track your applications from research to offer.</p>
                 </div>
               </div>
-            ))}
+              <div className="flex-1 lg:flex-[1.2]">
+                <div className="rounded-xl overflow-hidden shadow-2xl border border-border/50">
+                  <img 
+                    src={featureTargetListReal} 
+                    alt="Target List and Pipeline features"
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 2: Match Score + AI Coach */}
+            <div className="flex flex-col lg:flex-row-reverse gap-12 items-center">
+              <div className="flex-1 space-y-8">
+                <div className="animate-fade-up">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
+                    <Crosshair className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-semibold text-2xl mb-3">Match Scoring</h3>
+                  <p className="text-muted-foreground">Know your fit before you apply. Our matching system analyzes your profile against each role—skills, seniority, experience.</p>
+                </div>
+                <div className="animate-fade-up" style={{ animationDelay: '100ms' }}>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-semibold text-2xl mb-3">AI Coach</h3>
+                  <p className="text-muted-foreground">Suggestions, not substitutions. Get personalized tips for each application. You stay authentic.</p>
+                </div>
+              </div>
+              <div className="flex-1 lg:flex-[1.2]">
+                <div className="rounded-xl overflow-hidden shadow-2xl border border-border/50">
+                  <img 
+                    src={featureMatchAiReal} 
+                    alt="Match Scoring and AI Coach features"
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
