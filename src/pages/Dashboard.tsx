@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Database, TrendingUp, Filter, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -190,6 +190,94 @@ const Dashboard = () => {
     fetchData();
   };
 
+  const handleDeleteOpportunity = async (id: string) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Oportunidade excluída",
+        description: "A oportunidade foi removida.",
+      });
+      fetchData();
+    }
+  };
+
+  const handleDuplicateOpportunity = async (opportunity: Opportunity) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("opportunities")
+      .insert({
+        user_id: user.id,
+        company_name: opportunity.company_name,
+        role_title: opportunity.role_title,
+        status: "researching",
+        location: opportunity.location,
+        seniority_level: opportunity.seniority_level,
+        work_model: opportunity.work_model,
+        tags: opportunity.tags,
+        job_url: opportunity.job_url,
+        salary_range: opportunity.salary_range,
+      });
+
+    if (error) {
+      toast({
+        title: "Erro ao duplicar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Oportunidade duplicada",
+        description: `Cópia de ${opportunity.company_name} criada.`,
+      });
+      fetchData();
+    }
+  };
+
+  const handleUpdateOpportunityTags = async (id: string, tags: string[]) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ tags })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar tags",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      fetchData();
+    }
+  };
+
+  const handleUpdateOpportunityRole = async (id: string, role_title: string) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ role_title })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar cargo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      fetchData();
+    }
+  };
+
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
     if (!user) return;
 
@@ -213,6 +301,27 @@ const Dashboard = () => {
       toast({
         title: "Oportunidade criada!",
         description: `${company.company_name} adicionada ao pipeline.`,
+      });
+      fetchData();
+    }
+  };
+
+  const handleDeleteTargetCompany = async (companyId: string) => {
+    const { error } = await supabase
+      .from("target_companies")
+      .delete()
+      .eq("id", companyId);
+
+    if (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Empresa removida",
+        description: "A empresa foi removida da sua lista.",
       });
       fetchData();
     }
@@ -343,6 +452,10 @@ const Dashboard = () => {
               opportunities={filteredOpportunities}
               onOpportunityClick={handleOpportunityClick}
               onUpdate={fetchData}
+              onDelete={handleDeleteOpportunity}
+              onDuplicate={handleDuplicateOpportunity}
+              onUpdateTags={handleUpdateOpportunityTags}
+              onUpdateRole={handleUpdateOpportunityRole}
             />
           </TabsContent>
           
@@ -350,7 +463,7 @@ const Dashboard = () => {
             <CompaniesView 
               companies={filteredTargetCompanies} 
               onCreateOpportunity={handleCreateOpportunityFromCompany}
-              targetRoles={profile?.target_roles || []}
+              onDeleteCompany={handleDeleteTargetCompany}
             />
           </TabsContent>
 
@@ -386,7 +499,7 @@ const Dashboard = () => {
 interface CompaniesViewProps {
   companies: TargetCompany[];
   onCreateOpportunity: (company: TargetCompany, role?: string) => void;
-  targetRoles: string[];
+  onDeleteCompany: (companyId: string) => void;
 }
 
 const FLAG_IMAGES: Record<string, string> = {
@@ -407,8 +520,7 @@ const countryMap: Record<string, { name: string; code: string }> = {
   netherlands: { name: "Holanda", code: "NL" },
 };
 
-const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: CompaniesViewProps) => {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+const CompaniesView = ({ companies, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
@@ -524,35 +636,6 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
         </div>
       </div>
 
-      {/* Role filter */}
-      {targetRoles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Cargo:</span>
-          <button
-            onClick={() => setSelectedRole(null)}
-            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-              selectedRole === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted"
-            }`}
-          >
-            Todos
-          </button>
-          {targetRoles.map((role) => (
-            <button
-              key={role}
-              onClick={() => setSelectedRole(selectedRole === role ? null : role)}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                selectedRole === role
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
-            >
-              {role}
-            </button>
-          ))}
-        </div>
-      )}
 
       {Object.entries(groupedCompanies).map(([country, countryCompanies]) => {
         const countryInfo = countryMap[country];
@@ -595,11 +678,19 @@ const CompaniesView = ({ companies, onCreateOpportunity, targetRoles }: Companie
                     </Button>
                   )}
                   <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => onDeleteCompany(company.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button 
                     size="sm" 
-                    onClick={() => onCreateOpportunity(company, selectedRole || undefined)}
+                    onClick={() => onCreateOpportunity(company)}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    {selectedRole ? `Criar ${selectedRole}` : "Criar Oportunidade"}
+                    Criar Oportunidade
                   </Button>
                 </div>
               </div>
