@@ -9,7 +9,8 @@ import {
   Shield, 
   ShieldOff,
   Monitor,
-  User
+  User,
+  Unlock
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -48,6 +49,8 @@ const getActionIcon = (action: string) => {
     case 'admin_role_granted':
     case 'admin_role_revoked':
       return <User className="h-4 w-4" />;
+    case 'admin_account_unlocked':
+      return <Unlock className="h-4 w-4" />;
     default:
       return <FileText className="h-4 w-4" />;
   }
@@ -67,6 +70,7 @@ const getActionLabel = (action: string): string => {
     'profile_updated': 'Profile Updated',
     'admin_role_granted': 'Admin Role Granted',
     'admin_role_revoked': 'Admin Role Revoked',
+    'admin_account_unlocked': 'Account Unlocked',
   };
   return labels[action] || action;
 };

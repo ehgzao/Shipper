@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { 
   Users, 
   Target, 
@@ -14,12 +15,17 @@ import {
   Calendar,
   TrendingUp,
   ShieldAlert,
-  Lock
+  Lock,
+  Unlock,
+  Activity,
+  CheckCircle,
+  XCircle,
+  UserPlus
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
 
@@ -32,6 +38,29 @@ interface AuditLog {
   created_at: string;
 }
 
+interface LockedAccount {
+  email: string;
+  locked_until: string;
+  failed_attempts: number;
+  created_at: string;
+}
+
+interface RecentLogin {
+  email: string;
+  success: boolean;
+  ip_address: string | null;
+  created_at: string;
+}
+
+interface UserEngagement {
+  users_active_today: number;
+  users_active_week: number;
+  new_users_today: number;
+  new_users_week: number;
+  opportunities_created_today: number;
+  opportunities_created_week: number;
+}
+
 interface AdminStats {
   total_users: number;
   total_opportunities: number;
@@ -39,7 +68,12 @@ interface AdminStats {
   ai_coach_usage_today: number;
   ai_coach_unique_users_today: number;
   failed_logins_today: number;
+  successful_logins_today: number;
   locked_accounts: number;
+  locked_account_details: LockedAccount[] | null;
+  active_sessions: number;
+  recent_logins: RecentLogin[] | null;
+  user_engagement: UserEngagement | null;
   rate_limit_details: Array<{
     user_id: string;
     email: string;
@@ -53,6 +87,7 @@ const Admin = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unlockingEmail, setUnlockingEmail] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -110,6 +145,30 @@ const Admin = () => {
     }
   };
 
+  const handleUnlockAccount = async (email: string) => {
+    setUnlockingEmail(email);
+    try {
+      const { data, error } = await supabase.rpc('admin_unlock_account', { p_email: email });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Account Unlocked",
+        description: `Successfully unlocked ${email}`,
+      });
+      
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: "Error unlocking account",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUnlockingEmail(null);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -147,6 +206,8 @@ const Admin = () => {
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="audit">Audit Logs</TabsTrigger>
             </TabsList>
@@ -198,34 +259,45 @@ const Admin = () => {
                 </Card>
               </div>
 
-              {/* Security Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* User Engagement */}
+              {stats.user_engagement && (
                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Failed Logins Today</CardTitle>
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      User Engagement
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.failed_logins_today}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Unsuccessful login attempts
-                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Active Today</p>
+                        <p className="text-2xl font-bold">{stats.user_engagement.users_active_today}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Active This Week</p>
+                        <p className="text-2xl font-bold">{stats.user_engagement.users_active_week}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">New Users Today</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.user_engagement.new_users_today}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">New Users This Week</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.user_engagement.new_users_week}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Opportunities Today</p>
+                        <p className="text-2xl font-bold">{stats.user_engagement.opportunities_created_today}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Opportunities This Week</p>
+                        <p className="text-2xl font-bold">{stats.user_engagement.opportunities_created_week}</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Locked Accounts</CardTitle>
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.locked_accounts}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Currently locked due to failed attempts
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+              )}
 
               {/* AI Coach Rate Limiting Details */}
               <Card>
@@ -284,6 +356,191 @@ const Admin = () => {
                   ) : (
                     <p className="text-center text-muted-foreground py-8">
                       No AI Coach usage in the last 7 days
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="activity" className="space-y-6">
+              {/* Activity Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Successful Logins Today</CardTitle>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{stats.successful_logins_today}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Failed Logins Today</CardTitle>
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{stats.failed_logins_today}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Sessions (24h)</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.active_sessions}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Logins */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    Recent Login Attempts
+                  </CardTitle>
+                  <CardDescription>Last 20 login attempts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {stats.recent_logins && stats.recent_logins.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 font-medium">Email</th>
+                            <th className="text-left py-3 px-2 font-medium">Status</th>
+                            <th className="text-left py-3 px-2 font-medium">IP Address</th>
+                            <th className="text-right py-3 px-2 font-medium">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats.recent_logins.map((login, index) => (
+                            <tr key={index} className="border-b last:border-0">
+                              <td className="py-3 px-2">
+                                <span className="text-muted-foreground">{login.email}</span>
+                              </td>
+                              <td className="py-3 px-2">
+                                <Badge variant={login.success ? "default" : "destructive"}>
+                                  {login.success ? "Success" : "Failed"}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-2 font-mono text-xs">
+                                {login.ip_address || "N/A"}
+                              </td>
+                              <td className="py-3 px-2 text-right text-muted-foreground">
+                                {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      No recent login attempts
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="security" className="space-y-6">
+              {/* Security Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Failed Logins Today</CardTitle>
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.failed_logins_today}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Unsuccessful login attempts
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Locked Accounts</CardTitle>
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.locked_accounts}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Currently locked due to failed attempts
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Locked Accounts Management */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Locked Accounts
+                  </CardTitle>
+                  <CardDescription>
+                    Accounts locked due to too many failed login attempts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {stats.locked_account_details && stats.locked_account_details.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 font-medium">Email</th>
+                            <th className="text-left py-3 px-2 font-medium">Failed Attempts</th>
+                            <th className="text-left py-3 px-2 font-medium">Locked Until</th>
+                            <th className="text-right py-3 px-2 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats.locked_account_details.map((account, index) => (
+                            <tr key={index} className="border-b last:border-0">
+                              <td className="py-3 px-2">
+                                <span className="text-muted-foreground">{account.email}</span>
+                              </td>
+                              <td className="py-3 px-2">
+                                <Badge variant="destructive">{account.failed_attempts} attempts</Badge>
+                              </td>
+                              <td className="py-3 px-2">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                                  {format(new Date(account.locked_until), 'MMM d, yyyy HH:mm')}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 text-right">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUnlockAccount(account.email)}
+                                  disabled={unlockingEmail === account.email}
+                                >
+                                  {unlockingEmail === account.email ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Unlock className="h-4 w-4 mr-1" />
+                                      Unlock
+                                    </>
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      No locked accounts
                     </p>
                   )}
                 </CardContent>
