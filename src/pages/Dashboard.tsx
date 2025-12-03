@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,9 +26,27 @@ import { useToast } from "@/hooks/use-toast";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { StaleNotifications } from "@/components/StaleNotifications";
+import { TargetCompanyNotification } from "@/components/TargetCompanyNotification";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import type { Database as SupabaseDB } from "@/integrations/supabase/types";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -54,6 +72,7 @@ interface Profile {
   strength_orientation: string | null;
   skills: string[] | null;
   target_roles: string[] | null;
+  verification_frequency_days: number | null;
 }
 
 interface TargetCompany {
@@ -64,6 +83,7 @@ interface TargetCompany {
   sector: string | null;
   careers_url: string | null;
   last_checked_at: string | null;
+  display_order: number | null;
 }
 
 const Dashboard = () => {
@@ -81,6 +101,7 @@ const Dashboard = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showCompanyNotification, setShowCompanyNotification] = useState(true);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

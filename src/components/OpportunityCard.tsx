@@ -262,13 +262,10 @@ export const OpportunityCard = ({
           )}
           
           <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Row 1: Company name + Fit stars (clickable) */}
-            <div className="flex items-center justify-between gap-2">
-              <h4 className="font-semibold text-sm text-foreground truncate leading-tight">
-                {opportunity.company_name}
-              </h4>
-              <FitIndicator />
-            </div>
+            {/* Row 1: Company name */}
+            <h4 className="font-semibold text-sm text-foreground truncate leading-tight">
+              {opportunity.company_name}
+            </h4>
             
             {/* Row 2: Role title - clickable dropdown */}
             <DropdownMenu>
@@ -289,7 +286,22 @@ export const OpportunityCard = ({
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Row 3: Tag - clickable dropdown */}
+            {/* Row 3: Country flag + name */}
+            {countryInfo && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <img 
+                  src={countryInfo.flag} 
+                  alt={countryInfo.name} 
+                  className="w-4 h-3 object-cover rounded-sm flex-shrink-0" 
+                />
+                <span>{countryInfo.name}</span>
+              </div>
+            )}
+            
+            {/* Row 4: Fit stars (clickable) */}
+            <FitIndicator />
+            
+            {/* Row 5: Tag - clickable dropdown */}
             <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -323,19 +335,7 @@ export const OpportunityCard = ({
               </DropdownMenu>
             </div>
             
-            {/* Row 4: Country flag + name */}
-            {countryInfo && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <img 
-                  src={countryInfo.flag} 
-                  alt={countryInfo.name} 
-                  className="w-4 h-3 object-cover rounded-sm flex-shrink-0" 
-                />
-                <span>{countryInfo.name}</span>
-              </div>
-            )}
-            
-            {/* Row 5: Last updated */}
+            {/* Row 6: Last updated */}
             {updatedText && (
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
                 <Clock className="h-3 w-3" />
