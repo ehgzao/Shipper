@@ -1064,6 +1064,7 @@ const SortableCompanyRow = ({
   getTypeBadgeColor, 
   getTypeLabel, 
   getLastCheckedText,
+  getLastCheckedColor,
   onCheckCareers,
   onCreateOpportunity,
   onDelete,
@@ -1073,6 +1074,7 @@ const SortableCompanyRow = ({
   getTypeBadgeColor: (type: string | null) => string;
   getTypeLabel: (type: string | null) => string;
   getLastCheckedText: (lastCheckedAt: string | null) => string;
+  getLastCheckedColor: (lastCheckedAt: string | null) => string;
   onCheckCareers: (companyId: string, careersUrl: string) => void;
   onCreateOpportunity: (company: TargetCompany) => void;
   onDelete: (company: TargetCompany) => void;
@@ -1108,7 +1110,7 @@ const SortableCompanyRow = ({
             {company.sector && (
               <p className="text-sm text-muted-foreground">{company.sector}</p>
             )}
-            <span className="text-xs text-muted-foreground/70">
+            <span className={`text-xs ${getLastCheckedColor(company.last_checked_at)}`}>
               {getLastCheckedText(company.last_checked_at)}
             </span>
           </div>
@@ -1222,6 +1224,18 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
       if (diffDays < 7) return `Checked ${diffDays} days ago`;
       return `Checked ${Math.floor(diffDays / 7)} weeks ago`;
     } catch { return "Never checked"; }
+  };
+
+  const getLastCheckedColor = (lastCheckedAt: string | null) => {
+    if (!lastCheckedAt) return "text-red-600 dark:text-red-400";
+    try {
+      const date = new Date(lastCheckedAt);
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 7) return "text-green-600 dark:text-green-400";
+      if (diffDays <= 15) return "text-amber-600 dark:text-amber-400";
+      return "text-red-600 dark:text-red-400";
+    } catch { return "text-red-600 dark:text-red-400"; }
   };
 
   const companiesWithUrls = companies.filter(c => c.careers_url);
@@ -1385,6 +1399,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                         getTypeBadgeColor={getTypeBadgeColor}
                         getTypeLabel={getTypeLabel}
                         getLastCheckedText={getLastCheckedText}
+                        getLastCheckedColor={getLastCheckedColor}
                         onCheckCareers={onCheckCareers}
                         onCreateOpportunity={onCreateOpportunity}
                         onDelete={setCompanyToDelete}
