@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.ai-coach]
 verify_jwt = true
+
+[functions.send-user-security-alert]
+verify_jwt = false

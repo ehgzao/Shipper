@@ -3,15 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Ship, Mail, Lock, ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema, getValidationError } from "@/lib/validations";
 import { checkAccountLockout, recordLoginAttempt, createAuditLog } from "@/lib/auditLog";
+import { getLoginContext, isNewDevice, storeDeviceFingerprint } from "@/lib/deviceFingerprint";
+import { supabase } from "@/integrations/supabase/client";
+
+const REMEMBER_EMAIL_KEY = 'shipper_remember_email';
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockMessage, setLockMessage] = useState("");
@@ -19,11 +25,39 @@ const Login = () => {
   const { signIn, signInWithGoogle, googleLoading, user } = useAuth();
   const navigate = useNavigate();
 
+  // Load remembered email on mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberEmail(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       navigate("/dashboard");
     }
   }, [user, navigate]);
+
+  // Send security alert to user
+  const sendUserSecurityAlert = async (
+    alertType: string,
+    userEmail: string,
+    details: Record<string, unknown>
+  ) => {
+    try {
+      await supabase.functions.invoke('send-user-security-alert', {
+        body: {
+          alert_type: alertType,
+          user_email: userEmail,
+          details,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send user security alert:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +72,16 @@ const Login = () => {
       });
       return;
     }
+
+    // Handle remember email
+    if (rememberEmail) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    }
+
+    // Get device and location context
+    const { deviceInfo, geoLocation, readableDevice } = await getLoginContext();
 
     // Check if account is locked
     const locked = await checkAccountLockout(email);
@@ -57,12 +101,21 @@ const Login = () => {
     const { error } = await signIn(email, password);
     
     if (error) {
-      // Record failed attempt
+      // Record failed attempt with device info
       const result = await recordLoginAttempt(email, false);
       
       if (result.locked) {
         setIsLocked(true);
         setLockMessage("Account temporarily locked due to too many failed attempts.");
+        
+        // Send account locked notification to user
+        await sendUserSecurityAlert('account_locked', email, {
+          ip_address: geoLocation.ip,
+          location: geoLocation.city && geoLocation.country 
+            ? `${geoLocation.city}, ${geoLocation.country}` 
+            : undefined,
+          device: readableDevice,
+        });
       } else if (result.attempts_remaining !== undefined) {
         setLockMessage(`${result.attempts_remaining} attempts remaining before lockout.`);
       }
@@ -77,7 +130,27 @@ const Login = () => {
     } else {
       // Record successful attempt (clears lockout)
       await recordLoginAttempt(email, true);
-      await createAuditLog('login_success', { email });
+      await createAuditLog('login_success', { 
+        email,
+        device: readableDevice,
+        ip_address: geoLocation.ip,
+        country: geoLocation.country,
+        city: geoLocation.city,
+      });
+      
+      // Check if this is a new device and send alert
+      if (isNewDevice(deviceInfo.fingerprint)) {
+        await sendUserSecurityAlert('new_device_login', email, {
+          ip_address: geoLocation.ip,
+          location: geoLocation.city && geoLocation.country 
+            ? `${geoLocation.city}, ${geoLocation.country}` 
+            : undefined,
+          device: readableDevice,
+        });
+      }
+      
+      // Store device fingerprint for future reference
+      storeDeviceFingerprint(deviceInfo.fingerprint);
       
       toast({
         title: "Welcome back!",
@@ -146,6 +219,20 @@ const Login = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberEmail}
+                onCheckedChange={(checked) => setRememberEmail(checked as boolean)}
+              />
+              <Label 
+                htmlFor="remember" 
+                className="text-sm font-normal text-muted-foreground cursor-pointer"
+              >
+                Remember my email
+              </Label>
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked}>

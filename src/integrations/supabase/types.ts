@@ -100,25 +100,37 @@ export type Database = {
       }
       login_attempts: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
+          device_fingerprint: string | null
           email: string
           id: string
           ip_address: string | null
           success: boolean
+          user_agent: string | null
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           email: string
           id?: string
           ip_address?: string | null
           success?: boolean
+          user_agent?: string | null
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
+          device_fingerprint?: string | null
           email?: string
           id?: string
           ip_address?: string | null
           success?: boolean
+          user_agent?: string | null
         }
         Relationships: []
       }
