@@ -11,6 +11,30 @@ const shortText = z.string().max(100, "Máximo de 100 caracteres").trim();
 const mediumText = z.string().max(255, "Máximo de 255 caracteres").trim();
 const longText = z.string().max(2000, "Máximo de 2000 caracteres").trim();
 
+// Login form validation
+export const loginSchema = z.object({
+  email: z.string().email("Email inválido").max(255, "Email deve ter no máximo 255 caracteres"),
+  password: z.string().min(1, "Senha é obrigatória"),
+});
+
+export type LoginFormData = z.infer<typeof loginSchema>;
+
+// Signup form validation
+export const signupSchema = z.object({
+  name: mediumText.min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido").max(255, "Email deve ter no máximo 255 caracteres"),
+  password: z.string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .regex(/[A-Z]/, "Senha deve conter pelo menos uma letra maiúscula")
+    .regex(/[0-9]/, "Senha deve conter pelo menos um número"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não conferem",
+  path: ["confirmPassword"],
+});
+
+export type SignupFormData = z.infer<typeof signupSchema>;
+
 // Opportunity form validation
 export const opportunitySchema = z.object({
   companyName: shortText.min(1, "Empresa é obrigatória"),
