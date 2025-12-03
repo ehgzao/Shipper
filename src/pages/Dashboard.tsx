@@ -267,6 +267,9 @@ const Dashboard = () => {
   };
 
   const handleDeleteOpportunity = async (id: string) => {
+    // Get the opportunity before deleting for undo functionality
+    const deletedOpp = opportunities.find(o => o.id === id);
+    
     // Soft delete - move to trash
     const { error } = await supabase
       .from("opportunities")
@@ -285,7 +288,16 @@ const Dashboard = () => {
     } else {
       toast({
         title: "Moved to trash",
-        description: "The opportunity was moved to trash.",
+        description: deletedOpp ? `${deletedOpp.company_name} - ${deletedOpp.role_title}` : "The opportunity was moved to trash.",
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleRestoreOpportunity(id)}
+          >
+            Undo
+          </Button>
+        ),
       });
       fetchData();
     }
@@ -707,6 +719,21 @@ const Dashboard = () => {
                 <Plus className="h-4 w-4" />
                 New
               </Button>
+
+              {/* Trash Bin Button */}
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="relative"
+                onClick={() => setShowTrashBin(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletedOpportunities.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-medium min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                    {deletedOpportunities.length}
+                  </span>
+                )}
+              </Button>
               
               {opportunities.length > 0 && (
                 <DropdownMenu>
@@ -736,16 +763,6 @@ const Dashboard = () => {
                     <DropdownMenuItem onClick={handleExportData}>
                       <Download className="h-4 w-4 mr-2" />
                       Export Data
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setShowTrashBin(true)}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      View Trash Bin
-                      {deletedOpportunities.length > 0 && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
-                          {deletedOpportunities.length}
-                        </Badge>
-                      )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
