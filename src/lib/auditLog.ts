@@ -13,7 +13,9 @@ export type AuditAction =
   | 'session_revoked_all'
   | 'profile_updated'
   | 'admin_role_granted'
-  | 'admin_role_revoked';
+  | 'admin_role_revoked'
+  | 'admin_account_unlocked'
+  | 'admin_viewed_user_data';
 
 export const createAuditLog = async (
   action: AuditAction,
@@ -52,7 +54,45 @@ export interface LoginAttemptResult {
   locked_until?: string;
   attempts_remaining?: number;
   message: string;
+  should_alert?: boolean;
+  alert_type?: string;
+  alert_details?: {
+    email: string;
+    failed_attempts?: number;
+    attempt_count?: number;
+    ip_address?: string;
+  };
 }
+
+// Send security alert to admins
+const sendSecurityAlert = async (
+  alertType: string,
+  targetEmail: string,
+  details?: Record<string, unknown>
+) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-security-alerts`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alert_type: alertType,
+          target_email: targetEmail,
+          details: details
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to send security alert:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending security alert:', error);
+  }
+};
 
 export const recordLoginAttempt = async (
   email: string,
@@ -65,7 +105,15 @@ export const recordLoginAttempt = async (
     });
     
     if (error) throw error;
-    return data as unknown as LoginAttemptResult;
+    
+    const result = data as unknown as LoginAttemptResult;
+    
+    // Send security alert if needed
+    if (result.should_alert && result.alert_type && result.alert_details) {
+      sendSecurityAlert(result.alert_type, email, result.alert_details);
+    }
+    
+    return result;
   } catch (error) {
     console.error('Failed to record login attempt:', error);
     return { locked: false, message: 'Failed to record attempt' };
