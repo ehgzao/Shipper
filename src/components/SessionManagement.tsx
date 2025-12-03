@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Monitor, Smartphone, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Monitor, Smartphone, Trash2, Loader2, RefreshCw, MapPin, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { createAuditLog } from "@/lib/auditLog";
+import { sendSecurityNotification } from "@/lib/securityNotifications";
+import { fetchGeoLocation, parseUserAgent } from "@/lib/deviceFingerprint";
 
 interface Session {
   id: string;
@@ -22,6 +25,7 @@ const SessionManagement = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, session } = useAuth();
 
@@ -29,18 +33,17 @@ const SessionManagement = () => {
     if (user) {
       fetchSessions();
       trackCurrentSession();
+      // Fetch current location
+      fetchGeoLocation().then((geo) => {
+        if (geo.city && geo.country) {
+          setCurrentLocation(`${geo.city}, ${geo.country}`);
+        }
+      });
     }
   }, [user]);
 
   const getDeviceInfo = () => {
-    const ua = navigator.userAgent;
-    if (/Mobile|Android|iPhone|iPad/.test(ua)) {
-      return "Mobile Device";
-    }
-    if (/Windows/.test(ua)) return "Windows PC";
-    if (/Mac/.test(ua)) return "Mac";
-    if (/Linux/.test(ua)) return "Linux";
-    return "Unknown Device";
+    return parseUserAgent(navigator.userAgent);
   };
 
   const trackCurrentSession = async () => {
@@ -49,6 +52,7 @@ const SessionManagement = () => {
     try {
       const sessionId = session.access_token.substring(0, 32);
       const deviceInfo = getDeviceInfo();
+      const geo = await fetchGeoLocation();
 
       // Upsert current session
       await supabase
@@ -57,6 +61,7 @@ const SessionManagement = () => {
           user_id: user.id,
           session_id: sessionId,
           device_info: deviceInfo,
+          ip_address: geo.ip || null,
           last_active_at: new Date().toISOString(),
           is_current: true
         }, {
@@ -106,7 +111,19 @@ const SessionManagement = () => {
       if (error) throw error;
 
       // Log the action
-      await createAuditLog('session_revoked', { session_id: sessionToRevoke.session_id });
+      await createAuditLog('session_revoked', { 
+        session_id: sessionToRevoke.session_id,
+        device: sessionToRevoke.device_info 
+      });
+
+      // Send security notification
+      if (user?.email) {
+        sendSecurityNotification({
+          event_type: 'session_revoked',
+          user_email: user.email,
+          details: { device: sessionToRevoke.device_info }
+        });
+      }
 
       // If it's the current session, sign out
       if (sessionToRevoke.is_current) {
@@ -203,7 +220,7 @@ const SessionManagement = () => {
               {sessions.map((sessionItem) => (
                 <div
                   key={sessionItem.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                  className={`flex items-center justify-between p-4 rounded-lg border ${
                     sessionItem.is_current ? 'border-primary bg-primary/5' : 'border-border'
                   }`}
                 >
@@ -213,18 +230,32 @@ const SessionManagement = () => {
                     ) : (
                       <Monitor className="h-5 w-5 text-muted-foreground" />
                     )}
-                    <div>
+                    <div className="space-y-1">
                       <p className="font-medium text-sm flex items-center gap-2">
                         {sessionItem.device_info || "Unknown Device"}
                         {sessionItem.is_current && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                          <Badge variant="default" className="text-xs">
                             Current
-                          </span>
+                          </Badge>
                         )}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Last active {formatDistanceToNow(new Date(sessionItem.last_active_at), { addSuffix: true })}
-                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>
+                          Active {formatDistanceToNow(new Date(sessionItem.last_active_at), { addSuffix: true })}
+                        </span>
+                        {sessionItem.ip_address && (
+                          <span className="flex items-center gap-1">
+                            <Globe className="h-3 w-3" />
+                            {sessionItem.ip_address}
+                          </span>
+                        )}
+                        {sessionItem.is_current && currentLocation && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {currentLocation}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <Button
@@ -232,11 +263,12 @@ const SessionManagement = () => {
                     size="sm"
                     onClick={() => revokeSession(sessionItem)}
                     disabled={revokingId === sessionItem.id}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     {revokingId === sessionItem.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
