@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,9 @@ import {
   Activity,
   CheckCircle,
   XCircle,
-  UserPlus
+  UserPlus,
+  Download,
+  Radio
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +30,13 @@ import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
+import { 
+  exportToCSV, 
+  formatAuditLogsForExport, 
+  formatLoginAttemptsForExport,
+  formatLockedAccountsForExport,
+  generateSecurityReport 
+} from "@/lib/csvExport";
 
 interface AuditLog {
   id: string;
@@ -88,6 +97,12 @@ const Admin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unlockingEmail, setUnlockingEmail] = useState<string | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [liveEvents, setLiveEvents] = useState<Array<{
+    type: 'login' | 'audit' | 'lockout';
+    data: RecentLogin | AuditLog | LockedAccount;
+    timestamp: Date;
+  }>>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -95,6 +110,119 @@ const Admin = () => {
   useEffect(() => {
     checkAdminAccess();
   }, [user]);
+
+  // Realtime subscriptions
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel('admin-security-events')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'login_attempts' },
+        (payload) => {
+          const newLogin = payload.new as RecentLogin;
+          setLiveEvents(prev => [{
+            type: 'login' as const,
+            data: newLogin,
+            timestamp: new Date()
+          }, ...prev.slice(0, 49)]);
+          
+          // Update stats optimistically
+          setStats(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              [newLogin.success ? 'successful_logins_today' : 'failed_logins_today']: 
+                prev[newLogin.success ? 'successful_logins_today' : 'failed_logins_today'] + 1,
+              recent_logins: [newLogin, ...(prev.recent_logins || []).slice(0, 19)]
+            };
+          });
+
+          if (!newLogin.success) {
+            toast({
+              title: "Failed Login Detected",
+              description: `Failed login attempt for ${newLogin.email}`,
+              variant: "destructive",
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        (payload) => {
+          const newLog = payload.new as AuditLog;
+          setLiveEvents(prev => [{
+            type: 'audit' as const,
+            data: newLog,
+            timestamp: new Date()
+          }, ...prev.slice(0, 49)]);
+          
+          setStats(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              recent_audit_logs: [newLog, ...(prev.recent_audit_logs || []).slice(0, 19)]
+            };
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'account_lockouts' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const lockedAccount = payload.new as LockedAccount;
+            setLiveEvents(prev => [{
+              type: 'lockout' as const,
+              data: lockedAccount,
+              timestamp: new Date()
+            }, ...prev.slice(0, 49)]);
+            
+            toast({
+              title: "Account Locked",
+              description: `Account ${lockedAccount.email} has been locked`,
+              variant: "destructive",
+            });
+            
+            // Refresh stats to get updated locked accounts
+            fetchStats();
+          } else if (payload.eventType === 'DELETE') {
+            fetchStats();
+          }
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin]);
+
+  // Export functions
+  const handleExportAuditLogs = useCallback(() => {
+    if (!stats?.recent_audit_logs) return;
+    const formatted = formatAuditLogsForExport(stats.recent_audit_logs);
+    exportToCSV(formatted, 'audit_logs');
+    toast({ title: "Exported", description: "Audit logs exported to CSV" });
+  }, [stats?.recent_audit_logs, toast]);
+
+  const handleExportLoginAttempts = useCallback(() => {
+    if (!stats?.recent_logins) return;
+    const formatted = formatLoginAttemptsForExport(stats.recent_logins);
+    exportToCSV(formatted, 'login_attempts');
+    toast({ title: "Exported", description: "Login attempts exported to CSV" });
+  }, [stats?.recent_logins, toast]);
+
+  const handleExportSecurityReport = useCallback(() => {
+    if (!stats) return;
+    const report = generateSecurityReport(stats);
+    exportToCSV(report, 'security_report');
+    toast({ title: "Exported", description: "Security report exported to CSV" });
+  }, [stats, toast]);
 
   const checkAdminAccess = async () => {
     if (!user) {
@@ -186,14 +314,28 @@ const Admin = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Admin Dashboard</h1>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                Admin Dashboard
+                {realtimeConnected && (
+                  <Badge variant="outline" className="text-xs font-normal gap-1">
+                    <Radio className="h-3 w-3 text-green-500 animate-pulse" />
+                    Live
+                  </Badge>
+                )}
+              </h1>
               <p className="text-sm text-muted-foreground">System statistics and monitoring</p>
             </div>
           </div>
-          <Button variant="outline" onClick={fetchStats} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportSecurityReport} disabled={!stats}>
+              <Download className="h-4 w-4 mr-2" />
+              Security Report
+            </Button>
+            <Button variant="outline" onClick={fetchStats} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -398,12 +540,23 @@ const Admin = () => {
 
               {/* Recent Logins */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Recent Login Attempts
-                  </CardTitle>
-                  <CardDescription>Last 20 login attempts</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserPlus className="h-5 w-5" />
+                      Recent Login Attempts
+                    </CardTitle>
+                    <CardDescription>Last 20 login attempts</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleExportLoginAttempts}
+                    disabled={!stats.recent_logins?.length}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   {stats.recent_logins && stats.recent_logins.length > 0 ? (
@@ -449,6 +602,43 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
+              {/* Live Security Events */}
+              {liveEvents.length > 0 && (
+                <Card className="border-green-500/50 bg-green-500/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Radio className="h-4 w-4 text-green-500 animate-pulse" />
+                      Live Security Events
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {liveEvents.slice(0, 5).map((event, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-sm p-2 rounded bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={
+                              event.type === 'lockout' ? 'destructive' : 
+                              event.type === 'login' && 'success' in event.data && !event.data.success ? 'destructive' : 
+                              'default'
+                            }>
+                              {event.type === 'login' ? ('success' in event.data && event.data.success ? 'Login' : 'Failed Login') : 
+                               event.type === 'lockout' ? 'Account Locked' : 
+                               'action' in event.data ? String(event.data.action) : 'Audit'}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {'email' in event.data ? String(event.data.email) : 'Unknown'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(event.timestamp, { addSuffix: true })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Security Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
@@ -551,7 +741,18 @@ const Admin = () => {
               <AdminUserManagement />
             </TabsContent>
 
-            <TabsContent value="audit">
+            <TabsContent value="audit" className="space-y-6">
+              <div className="flex justify-end mb-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportAuditLogs}
+                  disabled={!stats.recent_audit_logs?.length}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Audit Logs
+                </Button>
+              </div>
               <AuditLogViewer logs={stats.recent_audit_logs} />
             </TabsContent>
           </Tabs>
