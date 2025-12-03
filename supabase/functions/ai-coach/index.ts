@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const DAILY_LIMIT = 10;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,6 +14,60 @@ serve(async (req) => {
   }
 
   try {
+    // Get user from JWT token
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check and increment rate limit using database function
+    const { data: isAllowed, error: rateLimitError } = await supabase.rpc(
+      "check_ai_coach_rate_limit",
+      { p_user_id: user.id, p_daily_limit: DAILY_LIMIT }
+    );
+
+    if (rateLimitError) {
+      console.error("Rate limit check error:", rateLimitError);
+      return new Response(JSON.stringify({ error: "Erro ao verificar limite" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isAllowed) {
+      // Get remaining requests to show in error
+      const { data: remaining } = await supabase.rpc(
+        "get_ai_coach_remaining_requests",
+        { p_user_id: user.id, p_daily_limit: DAILY_LIMIT }
+      );
+      
+      return new Response(JSON.stringify({ 
+        error: `Limite diário de ${DAILY_LIMIT} consultas atingido. Tente novamente amanhã.`,
+        remaining: remaining || 0
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { type, opportunity, profile } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -126,7 +183,13 @@ Seja prático e acionável.`;
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "Não foi possível gerar sugestões.";
 
-    return new Response(JSON.stringify({ suggestions: content }), {
+    // Get remaining requests for the user
+    const { data: remaining } = await supabase.rpc(
+      "get_ai_coach_remaining_requests",
+      { p_user_id: user.id, p_daily_limit: DAILY_LIMIT }
+    );
+
+    return new Response(JSON.stringify({ suggestions: content, remaining: remaining || 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
