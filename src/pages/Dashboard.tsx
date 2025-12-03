@@ -883,7 +883,6 @@ const Dashboard = () => {
             {showCompanyNotification && targetCompanies.length > 0 && (
               <TargetCompanyNotification
                 companies={targetCompanies}
-                opportunities={opportunities}
                 verificationDays={profile?.verification_frequency_days || 7}
                 onCheckCareers={handleCheckCareers}
                 onDismiss={() => setShowCompanyNotification(false)}
