@@ -72,6 +72,11 @@ interface KanbanBoardProps {
   selectionMode?: boolean;
 }
 
+// Forward onUpdate for card inline edits
+interface KanbanColumnPropsWithUpdate extends KanbanColumnProps {
+  onUpdateData?: () => void;
+}
+
 export const KanbanBoard = ({ 
   opportunities, 
   onOpportunityClick, 
@@ -290,6 +295,7 @@ export const KanbanBoard = ({
               selectedIds={selectedIds}
               onSelect={onSelect}
               selectionMode={selectionMode}
+              onUpdateData={onUpdate}
             />
           ))}
           
@@ -540,6 +546,7 @@ interface KanbanColumnProps {
   selectedIds?: Set<string>;
   onSelect?: (id: string, selected: boolean) => void;
   selectionMode?: boolean;
+  onUpdateData?: () => void;
 }
 
 const KanbanColumn = ({ 
@@ -549,7 +556,8 @@ const KanbanColumn = ({
   isDragging,
   selectedIds = new Set(),
   onSelect,
-  selectionMode = false
+  selectionMode = false,
+  onUpdateData
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -598,6 +606,7 @@ const KanbanColumn = ({
                   isSelected={selectedIds.has(opportunity.id)}
                   onSelect={onSelect}
                   selectionMode={selectionMode}
+                  onUpdate={onUpdateData}
                 />
               </div>
             ))

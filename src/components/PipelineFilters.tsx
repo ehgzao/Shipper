@@ -1,6 +1,5 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X, Tag, MapPin } from "lucide-react";
+import { X, Filter } from "lucide-react";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -10,144 +9,159 @@ import flagES from "@/assets/flags/es.png";
 import flagIE from "@/assets/flags/ie.png";
 import flagNL from "@/assets/flags/nl.png";
 
-const COUNTRY_MAP: Record<string, { name: string; flag: string }> = {
-  brazil: { name: "Brazil", flag: flagBR },
-  brasil: { name: "Brazil", flag: flagBR },
-  portugal: { name: "Portugal", flag: flagPT },
-  germany: { name: "Germany", flag: flagDE },
-  alemanha: { name: "Germany", flag: flagDE },
-  spain: { name: "Spain", flag: flagES },
-  espanha: { name: "Spain", flag: flagES },
-  ireland: { name: "Ireland", flag: flagIE },
-  irlanda: { name: "Ireland", flag: flagIE },
-  netherlands: { name: "Netherlands", flag: flagNL },
-  holanda: { name: "Netherlands", flag: flagNL },
+const FLAG_IMAGES: Record<string, string> = {
+  brazil: flagBR,
+  brasil: flagBR,
+  portugal: flagPT,
+  germany: flagDE,
+  alemanha: flagDE,
+  spain: flagES,
+  espanha: flagES,
+  ireland: flagIE,
+  irlanda: flagIE,
+  netherlands: flagNL,
+  holanda: flagNL,
+};
+
+const COUNTRY_MAP: Record<string, { name: string; code: string }> = {
+  brazil: { name: "Brazil", code: "BR" },
+  brasil: { name: "Brazil", code: "BR" },
+  portugal: { name: "Portugal", code: "PT" },
+  germany: { name: "Germany", code: "DE" },
+  alemanha: { name: "Germany", code: "DE" },
+  spain: { name: "Spain", code: "ES" },
+  espanha: { name: "Spain", code: "ES" },
+  ireland: { name: "Ireland", code: "IE" },
+  irlanda: { name: "Ireland", code: "IE" },
+  netherlands: { name: "Netherlands", code: "NL" },
+  holanda: { name: "Netherlands", code: "NL" },
+};
+
+const COMPANY_TYPE_LABELS: Record<string, string> = {
+  tech_giant: "Tech Giants",
+  scaleup: "Scaleups",
+  startup: "Startups",
 };
 
 interface PipelineFiltersProps {
   companies: string[];
   tags: string[];
   countries: string[];
+  companyTypes?: string[];
   filters: {
     seniority: string;
     workModel: string;
     company: string;
     tag: string;
     country: string;
+    companyType: string;
   };
-  onFiltersChange: (filters: { seniority: string; workModel: string; company: string; tag: string; country: string }) => void;
+  onFiltersChange: (filters: { seniority: string; workModel: string; company: string; tag: string; country: string; companyType: string }) => void;
 }
 
-export const PipelineFilters = ({ companies, tags, countries, filters, onFiltersChange }: PipelineFiltersProps) => {
-  const hasFilters = filters.seniority !== "all" || filters.workModel !== "all" || filters.company !== "all" || filters.tag !== "all" || filters.country !== "all";
+export const PipelineFilters = ({ countries, companyTypes = [], filters, onFiltersChange }: PipelineFiltersProps) => {
+  const hasFilters = filters.country !== "all" || filters.companyType !== "all";
 
   const clearFilters = () => {
-    onFiltersChange({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all" });
+    onFiltersChange({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all", companyType: "all" });
   };
 
-  const getCountryInfo = (country: string) => {
-    return COUNTRY_MAP[country.toLowerCase()] || { name: country.charAt(0).toUpperCase() + country.slice(1), flag: null };
+  const getCountryFlag = (country: string) => {
+    const lowerCountry = country.toLowerCase();
+    for (const [key, flag] of Object.entries(FLAG_IMAGES)) {
+      if (lowerCountry.includes(key) || key.includes(lowerCountry)) {
+        return flag;
+      }
+    }
+    return null;
   };
+
+  const getCountryName = (country: string) => {
+    const lowerCountry = country.toLowerCase();
+    return COUNTRY_MAP[lowerCountry]?.name || country.charAt(0).toUpperCase() + country.slice(1);
+  };
+
+  // Deduplicate countries by normalized name
+  const uniqueCountries = [...new Set(countries.map(c => {
+    const lowerC = c.toLowerCase();
+    return COUNTRY_MAP[lowerC]?.name || c;
+  }))];
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
-      <Select
-        value={filters.seniority}
-        onValueChange={(value) => onFiltersChange({ ...filters, seniority: value })}
-      >
-        <SelectTrigger className="w-[150px] bg-background">
-          <SelectValue placeholder="Seniority" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          <SelectItem value="entry">Entry</SelectItem>
-          <SelectItem value="mid">Mid</SelectItem>
-          <SelectItem value="senior">Senior</SelectItem>
-          <SelectItem value="lead">Lead</SelectItem>
-          <SelectItem value="principal">Principal</SelectItem>
-          <SelectItem value="director">Director</SelectItem>
-          <SelectItem value="vp">VP</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Filter className="h-4 w-4" />
+        Filters:
+      </div>
 
-      <Select
-        value={filters.workModel}
-        onValueChange={(value) => onFiltersChange({ ...filters, workModel: value })}
-      >
-        <SelectTrigger className="w-[150px] bg-background">
-          <SelectValue placeholder="Work Model" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          <SelectItem value="remote">Remote</SelectItem>
-          <SelectItem value="hybrid">Hybrid</SelectItem>
-          <SelectItem value="onsite">On-site</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {countries.length > 0 && (
-        <Select
-          value={filters.country}
-          onValueChange={(value) => onFiltersChange({ ...filters, country: value })}
+      {/* Country filter */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => onFiltersChange({ ...filters, country: "all" })}
+          className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+            filters.country === "all"
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background border-border hover:bg-muted"
+          }`}
         >
-          <SelectTrigger className="w-[150px] bg-background">
-            <MapPin className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue placeholder="Country" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            {countries.map((country) => {
-              const info = getCountryInfo(country);
-              return (
-                <SelectItem key={country} value={country}>
-                  <div className="flex items-center gap-2">
-                    {info.flag && (
-                      <img src={info.flag} alt={info.name} className="w-4 h-3 object-cover rounded-sm" />
-                    )}
-                    {info.name}
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      )}
+          All countries
+        </button>
+        {uniqueCountries.map((countryName) => {
+          // Find original country value to use for filter
+          const originalCountry = countries.find(c => getCountryName(c) === countryName) || countryName;
+          const flag = getCountryFlag(countryName);
+          return (
+            <button
+              key={countryName}
+              onClick={() => onFiltersChange({ 
+                ...filters, 
+                country: filters.country === originalCountry.toLowerCase() ? "all" : originalCountry.toLowerCase() 
+              })}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+                filters.country === originalCountry.toLowerCase()
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              {flag && (
+                <img src={flag} alt={countryName} className="w-4 h-3 object-cover rounded-sm" />
+              )}
+              {countryName}
+            </button>
+          );
+        })}
+      </div>
 
-      <Select
-        value={filters.company}
-        onValueChange={(value) => onFiltersChange({ ...filters, company: value })}
-      >
-        <SelectTrigger className="w-[180px] bg-background">
-          <SelectValue placeholder="Company" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          {companies.map((company) => (
-            <SelectItem key={company} value={company}>
-              {company}
-            </SelectItem>
+      {/* Company type filter */}
+      {companyTypes.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onFiltersChange({ ...filters, companyType: "all" })}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              filters.companyType === "all"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            All types
+          </button>
+          {(["tech_giant", "scaleup", "startup"] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => onFiltersChange({ 
+                ...filters, 
+                companyType: filters.companyType === type ? "all" : type 
+              })}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                filters.companyType === type
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              {COMPANY_TYPE_LABELS[type]}
+            </button>
           ))}
-        </SelectContent>
-      </Select>
-
-      {tags.length > 0 && (
-        <Select
-          value={filters.tag}
-          onValueChange={(value) => onFiltersChange({ ...filters, tag: value })}
-        >
-          <SelectTrigger className="w-[150px] bg-background">
-            <Tag className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue placeholder="Tag" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            {tags.map((tag) => (
-              <SelectItem key={tag} value={tag}>
-                {tag}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        </div>
       )}
 
       {hasFilters && (
