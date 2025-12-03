@@ -9,12 +9,70 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Valid alert types
+const VALID_ALERT_TYPES = ["account_locked", "suspicious_login", "new_device_login", "password_changed", "2fa_enabled", "2fa_disabled"] as const;
+type AlertType = typeof VALID_ALERT_TYPES[number];
+
 interface UserSecurityAlertRequest {
-  alert_type: "account_locked" | "suspicious_login" | "new_device_login" | "password_changed" | "2fa_enabled" | "2fa_disabled";
+  alert_type: AlertType;
   user_email: string;
   user_name?: string;
   details?: Record<string, unknown>;
 }
+
+// Input validation
+const validateInput = (body: unknown): { valid: true; data: UserSecurityAlertRequest } | { valid: false; error: string } => {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const { alert_type, user_email, user_name, details } = body as Record<string, unknown>;
+
+  // Validate alert_type
+  if (!alert_type || typeof alert_type !== 'string' || !VALID_ALERT_TYPES.includes(alert_type as AlertType)) {
+    return { valid: false, error: `Invalid alert_type. Must be one of: ${VALID_ALERT_TYPES.join(', ')}` };
+  }
+
+  // Validate user_email
+  if (!user_email || typeof user_email !== 'string') {
+    return { valid: false, error: 'user_email is required' };
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(user_email) || user_email.length > 255) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+
+  // Validate user_name (optional)
+  if (user_name !== undefined && (typeof user_name !== 'string' || user_name.length > 100)) {
+    return { valid: false, error: 'user_name must be a string with max 100 characters' };
+  }
+
+  // Validate details (optional)
+  if (details !== undefined && (typeof details !== 'object' || details === null)) {
+    return { valid: false, error: 'details must be an object if provided' };
+  }
+
+  return {
+    valid: true,
+    data: {
+      alert_type: alert_type as AlertType,
+      user_email: user_email.toLowerCase().trim(),
+      user_name: user_name as string | undefined,
+      details: details as Record<string, unknown> | undefined
+    }
+  };
+};
+
+// HTML escape to prevent injection
+const escapeHtml = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
 
 const getAlertEmailContent = (
   alert_type: string, 
@@ -22,7 +80,12 @@ const getAlertEmailContent = (
   details?: Record<string, unknown>
 ) => {
   const timestamp = new Date().toLocaleString();
-  const displayName = user_name || "User";
+  const displayName = escapeHtml(user_name || "User");
+  
+  // Sanitize details
+  const safeDetails = details ? Object.fromEntries(
+    Object.entries(details).map(([k, v]) => [k, typeof v === 'string' ? escapeHtml(v) : v])
+  ) : {};
   
   switch (alert_type) {
     case "account_locked":
@@ -35,8 +98,8 @@ const getAlertEmailContent = (
             <p>Your Shipper account has been temporarily locked due to multiple failed login attempts.</p>
             <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
-              ${details?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${details.ip_address}</p>` : ""}
-              ${details?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${details.location}</p>` : ""}
+              ${safeDetails?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${safeDetails.ip_address}</p>` : ""}
+              ${safeDetails?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${safeDetails.location}</p>` : ""}
             </div>
             <p><strong>What to do:</strong></p>
             <ul>
@@ -62,10 +125,10 @@ const getAlertEmailContent = (
             <p>We detected a suspicious login attempt on your Shipper account.</p>
             <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
-              ${details?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${details.ip_address}</p>` : ""}
-              ${details?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${details.location}</p>` : ""}
-              ${details?.device ? `<p style="margin: 8px 0 0 0;"><strong>Device:</strong> ${details.device}</p>` : ""}
-              ${details?.reason ? `<p style="margin: 8px 0 0 0;"><strong>Reason:</strong> ${details.reason}</p>` : ""}
+              ${safeDetails?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${safeDetails.ip_address}</p>` : ""}
+              ${safeDetails?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${safeDetails.location}</p>` : ""}
+              ${safeDetails?.device ? `<p style="margin: 8px 0 0 0;"><strong>Device:</strong> ${safeDetails.device}</p>` : ""}
+              ${safeDetails?.reason ? `<p style="margin: 8px 0 0 0;"><strong>Reason:</strong> ${safeDetails.reason}</p>` : ""}
             </div>
             <p><strong>If this was you:</strong> No action needed.</p>
             <p><strong>If this wasn't you:</strong></p>
@@ -91,9 +154,9 @@ const getAlertEmailContent = (
             <p>Your Shipper account was just accessed from a new device.</p>
             <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
-              ${details?.device ? `<p style="margin: 8px 0 0 0;"><strong>Device:</strong> ${details.device}</p>` : ""}
-              ${details?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${details.ip_address}</p>` : ""}
-              ${details?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${details.location}</p>` : ""}
+              ${safeDetails?.device ? `<p style="margin: 8px 0 0 0;"><strong>Device:</strong> ${safeDetails.device}</p>` : ""}
+              ${safeDetails?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${safeDetails.ip_address}</p>` : ""}
+              ${safeDetails?.location ? `<p style="margin: 8px 0 0 0;"><strong>Location:</strong> ${safeDetails.location}</p>` : ""}
             </div>
             <p><strong>If this was you:</strong> You can safely ignore this email.</p>
             <p><strong>If this wasn't you:</strong> Change your password immediately and contact support.</p>
@@ -114,7 +177,7 @@ const getAlertEmailContent = (
             <p>Your Shipper account password was successfully changed.</p>
             <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
-              ${details?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${details.ip_address}</p>` : ""}
+              ${safeDetails?.ip_address ? `<p style="margin: 8px 0 0 0;"><strong>IP Address:</strong> ${safeDetails.ip_address}</p>` : ""}
             </div>
             <p><strong>If you didn't make this change:</strong></p>
             <ul>
@@ -195,13 +258,65 @@ serve(async (req) => {
   }
 
   try {
-    const { alert_type, user_email, user_name, details }: UserSecurityAlertRequest = await req.json();
+    const authHeader = req.headers.get("Authorization");
+    
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // SECURITY: Require authentication
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Check if this is a service role call (internal) or user call
+    const isServiceRoleCall = authHeader.includes(supabaseServiceKey);
+    
+    // Parse and validate input first
+    const body = await req.json();
+    const validation = validateInput(body);
+    
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { alert_type, user_email, user_name, details } = validation.data;
+    
+    // If not a service role call, verify user can only send alerts to their own email
+    if (!isServiceRoleCall) {
+      const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      
+      const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+      if (userError || !user) {
+        console.error("User verification failed:", userError);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized - Invalid token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Users can only send alerts to their own email
+      if (user.email?.toLowerCase() !== user_email.toLowerCase()) {
+        console.error("User attempted to send alert to different email:", user.email, "vs", user_email);
+        return new Response(
+          JSON.stringify({ error: "Forbidden - Can only send alerts to your own email" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
     
     console.log(`Processing user security alert: ${alert_type} for ${user_email}`);
-
-    if (!user_email) {
-      throw new Error("User email is required");
-    }
 
     const emailContent = getAlertEmailContent(alert_type, user_name, details);
 
@@ -217,10 +332,6 @@ serve(async (req) => {
     console.log("User security alert email sent:", emailResponse);
 
     // Log the alert
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
     await supabaseAdmin.rpc('create_audit_log', {
       p_user_id: null,
       p_action: `user_security_alert_${alert_type}`,
@@ -234,7 +345,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error in send-user-security-alert:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
