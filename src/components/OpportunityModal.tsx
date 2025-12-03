@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Sparkles, Copy, Star } from "lucide-react";
+import { Trash2, Sparkles, Copy, Star, Snowflake } from "lucide-react";
 import { AICoach } from "@/components/AICoach";
 import { opportunitySchema, getValidationError } from "@/lib/validations";
 
@@ -111,6 +111,7 @@ export const OpportunityModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isFreezing, setIsFreezing] = useState(false);
   const [showAICoach, setShowAICoach] = useState(false);
   const { toast } = useToast();
   
@@ -315,6 +316,44 @@ export const OpportunityModal = ({
     setIsDuplicating(false);
   };
 
+  const handleToggleFrozen = async () => {
+    if (!opportunity) return;
+    setIsFreezing(true);
+
+    const currentTags = opportunity.tags || [];
+    const isFrozen = currentTags.includes("frozen");
+    const newTags = isFrozen 
+      ? currentTags.filter(t => t !== "frozen")
+      : [...currentTags, "frozen"];
+
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ 
+        tags: newTags,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", opportunity.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: isFrozen ? "Opportunity unfrozen" : "Opportunity frozen",
+        description: isFrozen 
+          ? `${opportunity.company_name} is now active.`
+          : `${opportunity.company_name} is now frozen.`,
+      });
+      onSaved();
+      onOpenChange(false);
+    }
+    setIsFreezing(false);
+  };
+
+  const isFrozen = opportunity?.tags?.includes("frozen") || false;
   const isEditing = !!opportunity;
 
   return (
@@ -551,6 +590,16 @@ export const OpportunityModal = ({
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className={`gap-1 ${isFrozen ? "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-700 hover:bg-sky-200 dark:hover:bg-sky-800" : ""}`}
+                    onClick={handleToggleFrozen}
+                    disabled={isFreezing}
+                  >
+                    <Snowflake className={`h-4 w-4 ${isFrozen ? "text-sky-500" : ""}`} />
+                    {isFreezing ? "..." : isFrozen ? "Unfreeze" : "Freeze"}
+                  </Button>
                   <Button 
                     type="button" 
                     variant="outline" 
