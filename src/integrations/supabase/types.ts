@@ -219,6 +219,7 @@ export type Database = {
           company_type: Database["public"]["Enums"]["company_type"] | null
           country: string
           created_at: string | null
+          display_order: number | null
           id: string
           is_preset: boolean | null
           last_checked_at: string | null
@@ -232,6 +233,7 @@ export type Database = {
           company_type?: Database["public"]["Enums"]["company_type"] | null
           country: string
           created_at?: string | null
+          display_order?: number | null
           id?: string
           is_preset?: boolean | null
           last_checked_at?: string | null
@@ -245,6 +247,7 @@ export type Database = {
           company_type?: Database["public"]["Enums"]["company_type"] | null
           country?: string
           created_at?: string | null
+          display_order?: number | null
           id?: string
           is_preset?: boolean | null
           last_checked_at?: string | null

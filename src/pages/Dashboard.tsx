@@ -191,10 +191,11 @@ const Dashboard = () => {
       .from("target_companies")
       .select("*")
       .eq("user_id", user.id)
+      .order("display_order", { ascending: true })
       .order("country", { ascending: true });
 
     if (companiesData) {
-      setTargetCompanies(companiesData);
+      setTargetCompanies(companiesData as TargetCompany[]);
     }
 
     const { data: opportunitiesData } = await supabase
@@ -652,6 +653,14 @@ const Dashboard = () => {
           </div>
 
           <TabsContent value="pipeline" className="mt-0">
+            {showCompanyNotification && targetCompanies.length > 0 && (
+              <TargetCompanyNotification
+                companies={targetCompanies}
+                verificationDays={profile?.verification_frequency_days || 7}
+                onCheckCareers={handleCheckCareers}
+                onDismiss={() => setShowCompanyNotification(false)}
+              />
+            )}
             <StaleNotifications 
               opportunities={opportunities}
               onOpportunityClick={handleOpportunityClick}
@@ -682,6 +691,16 @@ const Dashboard = () => {
               onDeleteCompany={handleDeleteTargetCompany}
               onCheckCareers={handleCheckCareers}
               onCheckAllCareers={handleCheckAllCareers}
+              onReorder={async (reorderedCompanies) => {
+                setTargetCompanies(reorderedCompanies);
+                // Update display_order in database
+                for (let i = 0; i < reorderedCompanies.length; i++) {
+                  await supabase
+                    .from("target_companies")
+                    .update({ display_order: i })
+                    .eq("id", reorderedCompanies[i].id);
+                }
+              }}
             />
           </TabsContent>
 
@@ -773,7 +792,95 @@ interface CompaniesViewProps {
   onDeleteCompany: (companyId: string) => void;
   onCheckCareers: (companyId: string, careersUrl: string) => void;
   onCheckAllCareers: () => void;
+  onReorder: (companies: TargetCompany[]) => void;
 }
+
+// Sortable company row component
+const SortableCompanyRow = ({ 
+  company, 
+  oppCount, 
+  getTypeBadgeColor, 
+  getTypeLabel, 
+  getLastCheckedText,
+  onCheckCareers,
+  onCreateOpportunity,
+  onDelete,
+}: {
+  company: TargetCompany;
+  oppCount: number;
+  getTypeBadgeColor: (type: string | null) => string;
+  getTypeLabel: (type: string | null) => string;
+  getLastCheckedText: (lastCheckedAt: string | null) => string;
+  onCheckCareers: (companyId: string, careersUrl: string) => void;
+  onCreateOpportunity: (company: TargetCompany) => void;
+  onDelete: (company: TargetCompany) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: company.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      className={`px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors ${isDragging ? 'opacity-50 bg-muted' : ''}`}
+    >
+      <div className="flex items-center gap-2">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 -ml-2 hover:bg-muted rounded">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h4 className="font-medium">{company.company_name}</h4>
+            {company.company_type && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(company.company_type)}`}>
+                {getTypeLabel(company.company_type)}
+              </span>
+            )}
+            {oppCount > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {oppCount} opp{oppCount !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            {company.sector && (
+              <p className="text-sm text-muted-foreground">{company.sector}</p>
+            )}
+            <span className="text-xs text-muted-foreground/70">
+              {getLastCheckedText(company.last_checked_at)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {company.careers_url && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => onCheckCareers(company.id, company.careers_url!)}
+          >
+            View Jobs
+          </Button>
+        )}
+        <Button
+          size="sm"
+          onClick={() => onCreateOpportunity(company)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(company)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const FLAG_IMAGES: Record<string, string> = {
   BR: flagBR,
@@ -793,10 +900,32 @@ const countryMap: Record<string, { name: string; code: string }> = {
   netherlands: { name: "Netherlands", code: "NL" },
 };
 
-const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany, onCheckCareers, onCheckAllCareers }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany, onCheckCareers, onCheckAllCareers, onReorder }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<TargetCompany | null>(null);
+  const [localCompanies, setLocalCompanies] = useState(companies);
+
+  // Sync local state with props
+  useEffect(() => {
+    setLocalCompanies(companies);
+  }, [companies]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = localCompanies.findIndex((c) => c.id === active.id);
+      const newIndex = localCompanies.findIndex((c) => c.id === over.id);
+      const reordered = arrayMove(localCompanies, oldIndex, newIndex);
+      setLocalCompanies(reordered);
+      onReorder(reordered);
+    }
+  };
 
   const getOpportunityCountByCompany = (companyName: string) => {
     return opportunities.filter(o => o.company_name === companyName).length;
@@ -844,15 +973,15 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
     return [...new Set(companies.map(c => c.company_type).filter(Boolean))];
   }, [companies]);
 
-  // Filter companies
+  // Filter companies from local state
   const filteredCompanies = useMemo(() => {
-    return companies.filter(c => {
+    return localCompanies.filter(c => {
       const country = c.country.toLowerCase();
       if (selectedCountry && country !== selectedCountry) return false;
       if (selectedType && c.company_type !== selectedType) return false;
       return true;
     });
-  }, [companies, selectedCountry, selectedType]);
+  }, [localCompanies, selectedCountry, selectedType]);
 
   // Group filtered by country
   const groupedCompanies = filteredCompanies.reduce((acc, company) => {
@@ -964,84 +1093,48 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
         )}
       </div>
 
-      {/* Companies by Country - matching Explore design */}
-      {filteredGrouped.map(([country, comps]) => {
-        const info = countryMap[country];
-        const code = info?.code || country.toUpperCase().slice(0, 2);
-        return (
-          <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-semibold flex items-center gap-2">
-                {FLAG_IMAGES[code] && (
-                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-5 h-3.5 object-cover rounded-sm" />
-                )}
-                {info?.name || country}
-                <span className="text-muted-foreground font-normal">
-                  ({comps.length} companies)
-                </span>
-              </h3>
-            </div>
-            <div className="divide-y divide-border">
-              {comps.map(company => {
-                const oppCount = getOpportunityCountByCompany(company.company_name);
-                return (
-                  <div key={company.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h4 className="font-medium">{company.company_name}</h4>
-                        {company.company_type && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(company.company_type)}`}>
-                            {getTypeLabel(company.company_type)}
-                          </span>
-                        )}
-                        {oppCount > 0 && (
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                            {oppCount} opp{oppCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        {company.sector && (
-                          <p className="text-sm text-muted-foreground">{company.sector}</p>
-                        )}
-                        <span className="text-xs text-muted-foreground/70">
-                          {getLastCheckedText(company.last_checked_at)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {company.careers_url && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => onCheckCareers(company.id, company.careers_url!)}
-                        >
-                          View Jobs
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        onClick={() => onCreateOpportunity(company)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setCompanyToDelete(company)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      {/* Companies by Country with drag-drop */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={localCompanies.map(c => c.id)} strategy={verticalListSortingStrategy}>
+          {filteredGrouped.map(([country, comps]) => {
+            const info = countryMap[country];
+            const code = info?.code || country.toUpperCase().slice(0, 2);
+            return (
+              <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    {FLAG_IMAGES[code] && (
+                      <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-5 h-3.5 object-cover rounded-sm" />
+                    )}
+                    {info?.name || country}
+                    <span className="text-muted-foreground font-normal">
+                      ({comps.length} companies)
+                    </span>
+                  </h3>
+                </div>
+                <div className="divide-y divide-border">
+                  {comps.map(company => {
+                    const oppCount = getOpportunityCountByCompany(company.company_name);
+                    return (
+                      <SortableCompanyRow
+                        key={company.id}
+                        company={company}
+                        oppCount={oppCount}
+                        getTypeBadgeColor={getTypeBadgeColor}
+                        getTypeLabel={getTypeLabel}
+                        getLastCheckedText={getLastCheckedText}
+                        onCheckCareers={onCheckCareers}
+                        onCreateOpportunity={onCreateOpportunity}
+                        onDelete={setCompanyToDelete}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!companyToDelete} onOpenChange={() => setCompanyToDelete(null)}>
