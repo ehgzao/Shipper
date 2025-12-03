@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Ship, Target, BarChart3, Sparkles, Check, ArrowRight, Users, Globe, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
 import featurePipelineScreenshot from "@/assets/feature-pipeline-screenshot.png";
-import featureMatchAiReal from "@/assets/feature-match-ai-real.png";
+import featureAnalyticsScreenshot from "@/assets/feature-analytics-screenshot.png";
 const Landing = () => {
   return <div className="min-h-screen bg-background">
       {/* Header */}
@@ -137,7 +137,7 @@ const Landing = () => {
               </div>
               <div className="flex-1 lg:flex-[1.2]">
                 <div className="rounded-xl overflow-hidden shadow-2xl border border-border/50">
-                  <img src={featureMatchAiReal} alt="Match Scoring and AI Coach features" className="w-full h-auto object-cover" />
+                  <img src={featureAnalyticsScreenshot} alt="Analytics and AI Coach features" className="w-full h-auto object-cover" />
                 </div>
               </div>
             </div>
