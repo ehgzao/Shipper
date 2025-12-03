@@ -10,6 +10,8 @@ import TwoFactorSetup from "@/components/TwoFactorSetup";
 import SessionManagement from "@/components/SessionManagement";
 import RateLimitVisualization from "@/components/RateLimitVisualization";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
+import AccountRecoveryOptions from "@/components/AccountRecoveryOptions";
+import SecurityEventTimeline from "@/components/SecurityEventTimeline";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -760,8 +762,14 @@ const Settings = () => {
             {/* Two-Factor Authentication */}
             <TwoFactorSetup />
             
+            {/* Account Recovery Options */}
+            <AccountRecoveryOptions />
+            
             {/* Session Management */}
             <SessionManagement />
+            
+            {/* Security Event Timeline */}
+            <SecurityEventTimeline />
           </div>
 
           {/* Restart Onboarding Section */}
