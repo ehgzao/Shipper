@@ -57,8 +57,8 @@ export const AICoach = ({ open, onOpenChange, opportunity, profile }: AICoachPro
     } catch (error) {
       console.error("AI Coach error:", error);
       toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao buscar sugestões",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error fetching suggestions",
         variant: "destructive",
       });
     } finally {
@@ -106,8 +106,8 @@ export const AICoach = ({ open, onOpenChange, opportunity, profile }: AICoachPro
 
           <TabsContent value="cover_letter" className="mt-4">
             <CoachingContent
-              title="Dicas para Cover Letter"
-              description="Sugestões personalizadas para sua carta de apresentação"
+              title="Cover Letter Tips"
+              description="Personalized suggestions for your cover letter"
               content={suggestions.cover_letter}
               isLoading={isLoading && activeTab === "cover_letter"}
             />
@@ -115,8 +115,8 @@ export const AICoach = ({ open, onOpenChange, opportunity, profile }: AICoachPro
 
           <TabsContent value="cv_highlights" className="mt-4">
             <CoachingContent
-              title="Destaques para o CV"
-              description="O que priorizar no seu currículo para esta vaga"
+              title="CV Highlights"
+              description="What to prioritize in your resume for this role"
               content={suggestions.cv_highlights}
               isLoading={isLoading && activeTab === "cv_highlights"}
             />
@@ -124,8 +124,8 @@ export const AICoach = ({ open, onOpenChange, opportunity, profile }: AICoachPro
 
           <TabsContent value="company_intel" className="mt-4">
             <CoachingContent
-              title="Inteligência da Empresa"
-              description="Insights para se preparar para o processo"
+              title="Company Intelligence"
+              description="Insights to prepare for the process"
               content={suggestions.company_intel}
               isLoading={isLoading && activeTab === "company_intel"}
             />
@@ -133,7 +133,7 @@ export const AICoach = ({ open, onOpenChange, opportunity, profile }: AICoachPro
         </Tabs>
 
         <div className="text-xs text-muted-foreground mt-4 pt-4 border-t">
-          💡 O AI Coach sugere, você executa. Use estas dicas como ponto de partida.
+          💡 AI Coach suggests, you execute. Use these tips as a starting point.
         </div>
       </DialogContent>
     </Dialog>
@@ -153,7 +153,7 @@ const CoachingContent = ({ title, description, content, isLoading }: CoachingCon
       <Card>
         <CardContent className="py-12 flex flex-col items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Gerando sugestões personalizadas...</p>
+          <p className="text-muted-foreground">Generating personalized suggestions...</p>
         </CardContent>
       </Card>
     );
@@ -175,7 +175,7 @@ const CoachingContent = ({ title, description, content, isLoading }: CoachingCon
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">Clique na aba para gerar sugestões.</p>
+          <p className="text-muted-foreground">Click on a tab to generate suggestions.</p>
         )}
       </CardContent>
     </Card>

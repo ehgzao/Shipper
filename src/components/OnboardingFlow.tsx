@@ -39,28 +39,28 @@ interface CountryWorkPreference {
 }
 
 const TOTAL_EXPERIENCE_OPTIONS = [
-  { value: "0-2", label: "0-2 anos", years: 1 },
-  { value: "2-5", label: "2-5 anos", years: 3 },
-  { value: "5-10", label: "5-10 anos", years: 7 },
-  { value: "10+", label: "10+ anos", years: 12 },
+  { value: "0-2", label: "0-2 years", years: 1 },
+  { value: "2-5", label: "2-5 years", years: 3 },
+  { value: "5-10", label: "5-10 years", years: 7 },
+  { value: "10+", label: "10+ years", years: 12 },
 ];
 
 const PRODUCT_EXPERIENCE_OPTIONS = [
-  { value: "0", label: "Em transição", years: 0 },
-  { value: "0-1", label: "0-1 anos", years: 1 },
-  { value: "1-3", label: "1-3 anos", years: 2 },
-  { value: "3-5", label: "3-5 anos", years: 4 },
-  { value: "5+", label: "5+ anos", years: 6 },
+  { value: "0", label: "Transitioning", years: 0 },
+  { value: "0-1", label: "0-1 years", years: 1 },
+  { value: "1-3", label: "1-3 years", years: 2 },
+  { value: "3-5", label: "3-5 years", years: 4 },
+  { value: "5+", label: "5+ years", years: 6 },
 ];
 
 const BACKGROUND_OPTIONS: { value: AppRole; label: string }[] = [
-  { value: "engineering", label: "Engenharia" },
+  { value: "engineering", label: "Engineering" },
   { value: "design", label: "Design" },
   { value: "marketing", label: "Marketing" },
-  { value: "sales", label: "Vendas" },
-  { value: "operations", label: "Operações" },
-  { value: "consulting", label: "Consultoria" },
-  { value: "other", label: "Outro" },
+  { value: "sales", label: "Sales" },
+  { value: "operations", label: "Operations" },
+  { value: "consulting", label: "Consulting" },
+  { value: "other", label: "Other" },
 ];
 
 const FLAG_IMAGES: Record<string, string> = {
@@ -73,30 +73,30 @@ const FLAG_IMAGES: Record<string, string> = {
 };
 
 const COUNTRY_OPTIONS = [
-  { value: "brazil", code: "BR", label: "Brasil" },
+  { value: "brazil", code: "BR", label: "Brazil" },
   { value: "portugal", code: "PT", label: "Portugal" },
-  { value: "germany", code: "DE", label: "Alemanha" },
-  { value: "spain", code: "ES", label: "Espanha" },
-  { value: "ireland", code: "IE", label: "Irlanda" },
-  { value: "netherlands", code: "NL", label: "Holanda" },
+  { value: "germany", code: "DE", label: "Germany" },
+  { value: "spain", code: "ES", label: "Spain" },
+  { value: "ireland", code: "IE", label: "Ireland" },
+  { value: "netherlands", code: "NL", label: "Netherlands" },
 ];
 
 const WORK_MODEL_OPTIONS: { value: WorkModel; label: string }[] = [
-  { value: "remote", label: "Remoto" },
-  { value: "hybrid", label: "Híbrido" },
-  { value: "onsite", label: "Presencial" },
+  { value: "remote", label: "Remote" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "onsite", label: "Onsite" },
 ];
 
 const COMPANY_STAGE_OPTIONS = [
-  { value: "startup", label: "Startup (seed/série A)" },
-  { value: "scaleup", label: "Scaleup (série B+)" },
+  { value: "startup", label: "Startup (seed/series A)" },
+  { value: "scaleup", label: "Scaleup (series B+)" },
   { value: "tech_giant", label: "Tech Giant (FAANG+)" },
 ];
 
 const STRENGTH_OPTIONS: { value: StrengthOrientation; label: string; description: string }[] = [
-  { value: "technical", label: "Técnico", description: "Foco em especificações e métricas" },
-  { value: "business", label: "Negócios", description: "Foco em estratégia e stakeholders" },
-  { value: "balanced", label: "Equilibrado", description: "Mix de ambos" },
+  { value: "technical", label: "Technical", description: "Focus on specs and metrics" },
+  { value: "business", label: "Business", description: "Focus on strategy and stakeholders" },
+  { value: "balanced", label: "Balanced", description: "Mix of both" },
 ];
 
 // Role suggestions based on profile
@@ -110,44 +110,44 @@ const getSuggestedRoles = (
   // Base roles by experience level
   if (productYears === "0") {
     roles.push(
-      { role: "Associate Product Manager", fit: "Ideal para transição de carreira" },
-      { role: "Junior Product Manager", fit: "Entrada em produto" }
+      { role: "Associate Product Manager", fit: "Ideal for career transition" },
+      { role: "Junior Product Manager", fit: "Entry level in product" }
     );
   } else if (productYears === "0-1") {
     roles.push(
-      { role: "Product Manager", fit: "Nível pleno inicial" },
-      { role: "Associate Product Manager", fit: "Consolidar experiência" }
+      { role: "Product Manager", fit: "Initial mid-level" },
+      { role: "Associate Product Manager", fit: "Build experience" }
     );
   } else if (productYears === "1-3") {
     roles.push(
-      { role: "Product Manager", fit: "Nível pleno" },
-      { role: "Senior Product Manager", fit: "Próximo passo" }
+      { role: "Product Manager", fit: "Mid-level" },
+      { role: "Senior Product Manager", fit: "Next step" }
     );
   } else if (productYears === "3-5") {
     roles.push(
-      { role: "Senior Product Manager", fit: "Nível sênior" },
-      { role: "Lead Product Manager", fit: "Liderança técnica" }
+      { role: "Senior Product Manager", fit: "Senior level" },
+      { role: "Lead Product Manager", fit: "Technical leadership" }
     );
   } else if (productYears === "5+") {
     roles.push(
-      { role: "Lead Product Manager", fit: "Liderança de times" },
-      { role: "Principal Product Manager", fit: "IC sênior" },
-      { role: "Head of Product", fit: "Gestão de área" }
+      { role: "Lead Product Manager", fit: "Team leadership" },
+      { role: "Principal Product Manager", fit: "Senior IC" },
+      { role: "Head of Product", fit: "Area management" }
     );
   }
   
   // Add specialization based on background
   if (background === "engineering" && strength !== "business") {
-    roles.push({ role: "Technical Product Manager", fit: `Background em ${background}` });
+    roles.push({ role: "Technical Product Manager", fit: `Engineering background` });
   }
   if (background === "design") {
-    roles.push({ role: "Product Design Manager", fit: "Background em design" });
+    roles.push({ role: "Product Design Manager", fit: "Design background" });
   }
   if ((background === "sales" || background === "marketing") && strength !== "technical") {
-    roles.push({ role: "Growth Product Manager", fit: `Background em ${background === "sales" ? "vendas" : "marketing"}` });
+    roles.push({ role: "Growth Product Manager", fit: `${background} background` });
   }
   if (background === "operations") {
-    roles.push({ role: "Platform Product Manager", fit: "Background em operações" });
+    roles.push({ role: "Platform Product Manager", fit: "Operations background" });
   }
   
   return roles.slice(0, 5); // Max 5 suggestions
@@ -281,7 +281,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
 
     if (profileError) {
       toast({
-        title: "Erro ao salvar perfil",
+        title: "Error saving profile",
         description: profileError.message,
         variant: "destructive",
       });
@@ -308,7 +308,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
 
       if (companiesError) {
         toast({
-          title: "Erro ao adicionar empresas",
+          title: "Error adding companies",
           description: companiesError.message,
           variant: "destructive",
         });
@@ -318,8 +318,8 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
     }
 
     toast({
-      title: "Perfil configurado!",
-      description: `${selectedCompanyIds.length} empresas adicionadas à sua lista.`,
+      title: "Profile configured!",
+      description: `${selectedCompanyIds.length} companies added to your list.`,
     });
     onComplete();
     setIsLoading(false);
@@ -356,9 +356,9 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <Ship className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">Shipper</span>
           </div>
-          <h1 className="text-2xl font-bold">Vamos configurar seu perfil</h1>
+          <h1 className="text-2xl font-bold">Let's set up your profile</h1>
           <p className="text-muted-foreground mt-2">
-            Responda algumas perguntas para personalizarmos sua experiência
+            Answer a few questions to personalize your experience
           </p>
         </div>
 
@@ -380,12 +380,12 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <Briefcase className="h-5 w-5" />
-                <h2 className="font-semibold">Experiência</h2>
+                <h2 className="font-semibold">Experience</h2>
               </div>
               
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium">Tempo total de carreira</Label>
+                  <Label className="text-sm font-medium">Total career length</Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {TOTAL_EXPERIENCE_OPTIONS.map((opt) => (
                       <Button
@@ -402,7 +402,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium">Anos de experiência em Produto</Label>
+                  <Label className="text-sm font-medium">Years of Product experience</Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {PRODUCT_EXPERIENCE_OPTIONS.map((opt) => (
                       <Button
@@ -418,13 +418,13 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                   </div>
                   {yearsExperienceProduct === "0" && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      Entendemos! Vamos recomendar vagas entry-level adequadas para transição.
+                      Got it! We'll recommend entry-level roles suitable for transition.
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium">Background anterior</Label>
+                  <Label className="text-sm font-medium">Previous background</Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {BACKGROUND_OPTIONS.map((opt) => (
                       <Button
@@ -447,11 +447,11 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <MapPin className="h-5 w-5" />
-                <h2 className="font-semibold">Países e modalidade de trabalho</h2>
+                <h2 className="font-semibold">Countries and work model</h2>
               </div>
               
               <p className="text-sm text-muted-foreground">
-                Selecione os países e defina a modalidade de trabalho para cada um.
+                Select countries and define the work model for each one.
               </p>
 
               <div className="space-y-4">
@@ -481,7 +481,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                       
                       {isSelected && (
                         <div className="px-3 pb-3 pt-1 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground mb-2">Modalidade:</p>
+                          <p className="text-xs text-muted-foreground mb-2">Work model:</p>
                           <div className="flex gap-2 flex-wrap">
                             {WORK_MODEL_OPTIONS.map((wm) => (
                               <button
@@ -511,7 +511,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <Building2 className="h-5 w-5" />
-                <h2 className="font-semibold">Tipo de empresa</h2>
+                <h2 className="font-semibold">Company type</h2>
               </div>
               
               <div className="space-y-3">
@@ -535,7 +535,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <Target className="h-5 w-5" />
-                <h2 className="font-semibold">Orientação de força</h2>
+                <h2 className="font-semibold">Strength orientation</h2>
               </div>
               
               <div className="space-y-3">
@@ -562,7 +562,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-primary">
                 <Plus className="h-5 w-5" />
-                <h2 className="font-semibold">Empresas alvo iniciais</h2>
+                <h2 className="font-semibold">Initial target companies</h2>
               </div>
               
               {/* Suggested roles based on profile */}
@@ -571,7 +571,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                 return suggestedRoles.length > 0 && (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                     <p className="text-sm font-medium text-primary mb-2">
-                      🎯 Cargos recomendados para você:
+                      🎯 Recommended roles for you:
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {suggestedRoles.map((item, idx) => (
@@ -586,18 +586,18 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Busque por esses cargos nas empresas abaixo
+                      Look for these roles at the companies below
                     </p>
                   </div>
                 );
               })()}
 
               <p className="text-sm text-muted-foreground">
-                Selecione empresas para começar seu pipeline. Você pode adicionar mais depois.
+                Select companies to start your pipeline. You can add more later.
               </p>
 
               <div className="text-sm text-muted-foreground mb-2">
-                {selectedCompanyIds.length} de {filteredCompanies.length} empresa(s) selecionada(s)
+                {selectedCompanyIds.length} of {filteredCompanies.length} company(ies) selected
               </div>
 
               <div className="space-y-4">
@@ -635,7 +635,7 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
                           onClick={() => toggleAllCompaniesInCountry(countryCompanyIds)}
                           className="text-xs text-primary hover:underline"
                         >
-                          {allCountrySelected ? "Desmarcar todas" : someCountrySelected ? "Selecionar todas" : "Selecionar todas"}
+                          {allCountrySelected ? "Deselect all" : someCountrySelected ? "Select all" : "Select all"}
                         </button>
                       </div>
                       <div className="space-y-1">
@@ -679,17 +679,17 @@ export const OnboardingFlow = ({ userId, onComplete }: OnboardingFlowProps) => {
             disabled={step === 1}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Voltar
+            Back
           </Button>
           
           {step < totalSteps ? (
             <Button onClick={() => setStep(s => s + 1)} disabled={!canProceed()}>
-              Próximo
+              Next
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
             <Button onClick={handleComplete} disabled={!canProceed() || isLoading}>
-              {isLoading ? "Salvando..." : "Começar"}
+              {isLoading ? "Saving..." : "Get Started"}
             </Button>
           )}
         </div>

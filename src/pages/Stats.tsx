@@ -8,7 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
 import { subDays, subMonths, isAfter, parseISO, format, startOfWeek, startOfMonth, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { FunnelTimingStats } from "@/components/FunnelTimingStats";
 import type { Opportunity as OpportunityType } from "@/components/OpportunityModal";
 
@@ -33,17 +32,17 @@ interface Opportunity {
 }
 
 const FLAG_MAP: Record<string, { flag: string; name: string }> = {
-  brazil: { flag: flagBR, name: "Brasil" },
-  brasil: { flag: flagBR, name: "Brasil" },
+  brazil: { flag: flagBR, name: "Brazil" },
+  brasil: { flag: flagBR, name: "Brazil" },
   portugal: { flag: flagPT, name: "Portugal" },
-  germany: { flag: flagDE, name: "Alemanha" },
-  alemanha: { flag: flagDE, name: "Alemanha" },
-  spain: { flag: flagES, name: "Espanha" },
-  espanha: { flag: flagES, name: "Espanha" },
-  ireland: { flag: flagIE, name: "Irlanda" },
-  irlanda: { flag: flagIE, name: "Irlanda" },
-  netherlands: { flag: flagNL, name: "Holanda" },
-  holanda: { flag: flagNL, name: "Holanda" },
+  germany: { flag: flagDE, name: "Germany" },
+  alemanha: { flag: flagDE, name: "Germany" },
+  spain: { flag: flagES, name: "Spain" },
+  espanha: { flag: flagES, name: "Spain" },
+  ireland: { flag: flagIE, name: "Ireland" },
+  irlanda: { flag: flagIE, name: "Ireland" },
+  netherlands: { flag: flagNL, name: "Netherlands" },
+  holanda: { flag: flagNL, name: "Netherlands" },
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -57,32 +56,32 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  researching: "Pesquisando",
-  applied: "Aplicado",
-  interviewing: "Entrevistando",
-  offer: "Oferta",
-  rejected: "Rejeitado",
+  researching: "Researching",
+  applied: "Applied",
+  interviewing: "Interviewing",
+  offer: "Offer",
+  rejected: "Rejected",
   ghosted: "Ghosted",
-  withdrawn: "Desistiu",
+  withdrawn: "Withdrawn",
 };
 
 type TimePeriod = "all" | "week" | "month" | "3months" | "6months";
 
 const TIME_PERIOD_OPTIONS: { value: TimePeriod; label: string }[] = [
-  { value: "all", label: "Todo período" },
-  { value: "week", label: "Última semana" },
-  { value: "month", label: "Último mês" },
-  { value: "3months", label: "Últimos 3 meses" },
-  { value: "6months", label: "Últimos 6 meses" },
+  { value: "all", label: "All time" },
+  { value: "week", label: "Last week" },
+  { value: "month", label: "Last month" },
+  { value: "3months", label: "Last 3 months" },
+  { value: "6months", label: "Last 6 months" },
 ];
 
 const normalizeCountry = (location: string | null): string => {
-  if (!location) return "Outros";
+  if (!location) return "Other";
   const lower = location.toLowerCase();
   for (const [key, value] of Object.entries(FLAG_MAP)) {
     if (lower.includes(key)) return value.name;
   }
-  return "Outros";
+  return "Other";
 };
 
 const getDateThreshold = (period: TimePeriod): Date | null => {
@@ -262,7 +261,7 @@ const Stats = () => {
           return d >= monthStart && d <= monthEnd;
         }).length;
         return {
-          period: format(month, "MMM/yy", { locale: ptBR }),
+          period: format(month, "MMM/yy"),
           total: count,
         };
       });
@@ -276,7 +275,7 @@ const Stats = () => {
           return d >= weekStart && d <= weekEnd;
         }).length;
         return {
-          period: format(weekStart, "dd/MM", { locale: ptBR }),
+          period: format(weekStart, "MM/dd"),
           total: count,
         };
       });
@@ -309,7 +308,7 @@ const Stats = () => {
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-medium flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Estatísticas
+                Statistics
               </h1>
               <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
                 <SelectTrigger className="w-[160px] h-8 text-sm">
@@ -334,11 +333,11 @@ const Stats = () => {
         {opportunities.length === 0 ? (
           <div className="text-center py-16">
             <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Sem dados ainda</h2>
+            <h2 className="text-xl font-semibold mb-2">No data yet</h2>
             <p className="text-muted-foreground mb-4">
-              Adicione oportunidades ao seu pipeline para ver estatísticas.
+              Add opportunities to your pipeline to see statistics.
             </p>
-            <Button onClick={() => navigate("/dashboard")}>Ir para Dashboard</Button>
+            <Button onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -365,7 +364,7 @@ const Stats = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{summaryStats.applied}</p>
-                      <p className="text-xs text-muted-foreground">Aplicados</p>
+                      <p className="text-xs text-muted-foreground">Applied</p>
                     </div>
                   </div>
                 </CardContent>
@@ -378,7 +377,7 @@ const Stats = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{summaryStats.interviewing}</p>
-                      <p className="text-xs text-muted-foreground">Entrevistando</p>
+                      <p className="text-xs text-muted-foreground">Interviewing</p>
                     </div>
                   </div>
                 </CardContent>
@@ -391,7 +390,7 @@ const Stats = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{summaryStats.offers}</p>
-                      <p className="text-xs text-muted-foreground">Ofertas</p>
+                      <p className="text-xs text-muted-foreground">Offers</p>
                     </div>
                   </div>
                 </CardContent>
@@ -408,9 +407,9 @@ const Stats = () => {
                         <TrendingUp className="h-5 w-5 text-blue-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Aplicação → Entrevista</p>
+                        <p className="text-sm font-medium text-muted-foreground">Application → Interview</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {summaryStats.interviewing + summaryStats.offers} de {summaryStats.applied} aplicações
+                          {summaryStats.interviewing + summaryStats.offers} of {summaryStats.applied} applications
                         </p>
                       </div>
                     </div>
@@ -432,7 +431,7 @@ const Stats = () => {
                                 ? "text-red-500" 
                                 : "text-muted-foreground"
                           }`}>
-                            {previousPeriodStats.applicationToInterviewRate}% período anterior
+                            {previousPeriodStats.applicationToInterviewRate}% previous period
                           </span>
                         </div>
                       )}
@@ -454,9 +453,9 @@ const Stats = () => {
                         <TrendingUp className="h-5 w-5 text-green-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Entrevista → Oferta</p>
+                        <p className="text-sm font-medium text-muted-foreground">Interview → Offer</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {summaryStats.offers} de {summaryStats.interviewing + summaryStats.offers} entrevistas
+                          {summaryStats.offers} of {summaryStats.interviewing + summaryStats.offers} interviews
                         </p>
                       </div>
                     </div>
@@ -478,7 +477,7 @@ const Stats = () => {
                                 ? "text-red-500" 
                                 : "text-muted-foreground"
                           }`}>
-                            {previousPeriodStats.interviewToOfferRate}% período anterior
+                            {previousPeriodStats.interviewToOfferRate}% previous period
                           </span>
                         </div>
                       )}
@@ -504,7 +503,7 @@ const Stats = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Briefcase className="h-4 w-4" />
-                    Por Cargo
+                    By Role
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -521,7 +520,7 @@ const Stats = () => {
                           axisLine={false}
                         />
                         <Tooltip 
-                          formatter={(value) => [`${value} oportunidades`, '']}
+                          formatter={(value) => [`${value} opportunities`, '']}
                           contentStyle={{ 
                             background: 'hsl(var(--card))', 
                             border: '1px solid hsl(var(--border))',
@@ -532,7 +531,7 @@ const Stats = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p className="text-muted-foreground text-sm">Sem dados</p>
+                    <p className="text-muted-foreground text-sm">No data</p>
                   )}
                 </CardContent>
               </Card>
@@ -542,7 +541,7 @@ const Stats = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MapPin className="h-4 w-4" />
-                    Por País
+                    By Country
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -577,7 +576,7 @@ const Stats = () => {
                       })}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-sm">Sem dados</p>
+                    <p className="text-muted-foreground text-sm">No data</p>
                   )}
                 </CardContent>
               </Card>
@@ -587,7 +586,7 @@ const Stats = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <TrendingUp className="h-4 w-4" />
-                    Por Status
+                    By Status
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -610,7 +609,7 @@ const Stats = () => {
                             ))}
                           </Pie>
                           <Tooltip 
-                            formatter={(value) => [`${value} oportunidades`, '']}
+                            formatter={(value) => [`${value} opportunities`, '']}
                             contentStyle={{ 
                               background: 'hsl(var(--card))', 
                               border: '1px solid hsl(var(--border))',
@@ -633,7 +632,7 @@ const Stats = () => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-sm">Sem dados</p>
+                    <p className="text-muted-foreground text-sm">No data</p>
                   )}
                 </CardContent>
               </Card>
@@ -644,7 +643,7 @@ const Stats = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Calendar className="h-4 w-4" />
-                      Evolução Temporal
+                      Temporal Evolution
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -664,7 +663,7 @@ const Stats = () => {
                           allowDecimals={false}
                         />
                         <Tooltip 
-                          formatter={(value) => [`${value} oportunidades`, 'Total']}
+                          formatter={(value) => [`${value} opportunities`, 'Total']}
                           contentStyle={{ 
                             background: 'hsl(var(--card))', 
                             border: '1px solid hsl(var(--border))',
@@ -691,7 +690,7 @@ const Stats = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Target className="h-4 w-4" />
-                      Tags Mais Usadas
+                      Most Used Tags
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
