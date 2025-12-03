@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RotateCcw, Trash2, MapPin, Briefcase } from "lucide-react";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import type { Opportunity } from "./OpportunityModal";
@@ -27,6 +28,7 @@ interface TrashBinDialogProps {
   onOpenChange: (open: boolean) => void;
   deletedOpportunities: Opportunity[];
   onRestore: (opportunityId: string) => void;
+  onBulkRestore: (opportunityIds: string[]) => void;
   onPermanentDelete: (opportunityId: string) => void;
   onEmptyTrash: () => void;
 }
@@ -47,11 +49,40 @@ export const TrashBinDialog = ({
   onOpenChange,
   deletedOpportunities,
   onRestore,
+  onBulkRestore,
   onPermanentDelete,
   onEmptyTrash,
 }: TrashBinDialogProps) => {
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === deletedOpportunities.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(deletedOpportunities.map(o => o.id)));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkRestore = () => {
+    if (selectedIds.size > 0) {
+      onBulkRestore(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    }
+  };
 
   const getDeletedTimeText = (deletedAt: string | null) => {
     if (!deletedAt) return "Unknown";
@@ -85,6 +116,32 @@ export const TrashBinDialog = ({
             </DialogTitle>
           </DialogHeader>
 
+          {/* Bulk actions bar */}
+          {deletedOpportunities.length > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selectedIds.size === deletedOpportunities.length && deletedOpportunities.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}
+                </span>
+              </div>
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={handleBulkRestore}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Restore Selected ({selectedIds.size})
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Opportunities list */}
           <div className="flex-1 overflow-y-auto space-y-3 py-2">
             {deletedOpportunities.length === 0 ? (
@@ -102,9 +159,15 @@ export const TrashBinDialog = ({
                 return (
                   <div
                     key={opportunity.id}
-                    className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors border border-border/50"
+                    className={`bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors border ${selectedIds.has(opportunity.id) ? 'border-primary' : 'border-border/50'}`}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox */}
+                      <Checkbox
+                        checked={selectedIds.has(opportunity.id)}
+                        onCheckedChange={() => handleToggleSelect(opportunity.id)}
+                        className="mt-1"
+                      />
                       <div className="flex-1 min-w-0">
                         {/* Header */}
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
