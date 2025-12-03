@@ -163,6 +163,7 @@ export type Database = {
           full_name: string | null
           id: string
           industry_experience: string[] | null
+          kanban_sort_preference: string | null
           onboarding_completed: boolean | null
           preferred_company_stage: string[] | null
           preferred_countries: string[] | null
@@ -185,6 +186,7 @@ export type Database = {
           full_name?: string | null
           id: string
           industry_experience?: string[] | null
+          kanban_sort_preference?: string | null
           onboarding_completed?: boolean | null
           preferred_company_stage?: string[] | null
           preferred_countries?: string[] | null
@@ -207,6 +209,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           industry_experience?: string[] | null
+          kanban_sort_preference?: string | null
           onboarding_completed?: boolean | null
           preferred_company_stage?: string[] | null
           preferred_countries?: string[] | null
