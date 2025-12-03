@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, ShieldCheck, ShieldOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface TwoFactorSetupProps {
   onStatusChange?: (enabled: boolean) => void;
@@ -92,6 +93,9 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
       setVerifyCode("");
       onStatusChange?.(true);
 
+      // Log the action
+      await createAuditLog('2fa_enabled', {});
+
       toast({
         title: "2FA Enabled",
         description: "Two-factor authentication has been successfully enabled.",
@@ -117,6 +121,9 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
       setIsEnabled(false);
       setFactorId(null);
       onStatusChange?.(false);
+
+      // Log the action
+      await createAuditLog('2fa_disabled', {});
 
       toast({
         title: "2FA Disabled",

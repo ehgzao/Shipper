@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Target, 
@@ -11,12 +12,25 @@ import {
   Loader2,
   RefreshCw,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  ShieldAlert,
+  Lock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import AdminUserManagement from "@/components/AdminUserManagement";
+import AuditLogViewer from "@/components/AuditLogViewer";
+
+interface AuditLog {
+  id: string;
+  user_id: string;
+  email: string | null;
+  action: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
 
 interface AdminStats {
   total_users: number;
@@ -24,12 +38,15 @@ interface AdminStats {
   total_target_companies: number;
   ai_coach_usage_today: number;
   ai_coach_unique_users_today: number;
+  failed_logins_today: number;
+  locked_accounts: number;
   rate_limit_details: Array<{
     user_id: string;
     email: string;
     request_count: number;
     reset_date: string;
   }> | null;
+  recent_audit_logs: AuditLog[] | null;
 }
 
 const Admin = () => {
@@ -127,115 +144,160 @@ const Admin = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : stats ? (
-          <div className="space-y-8">
-            {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              {/* Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.total_users}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Opportunities</CardTitle>
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.total_opportunities}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Target Companies</CardTitle>
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.total_target_companies}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">AI Coach Today</CardTitle>
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.ai_coach_usage_today}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.ai_coach_unique_users_today} unique users
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Security Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Failed Logins Today</CardTitle>
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.failed_logins_today}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Unsuccessful login attempts
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Locked Accounts</CardTitle>
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.locked_accounts}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Currently locked due to failed attempts
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* AI Coach Rate Limiting Details */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    AI Coach Usage (Last 7 Days)
+                  </CardTitle>
+                  <CardDescription>
+                    Rate limiting statistics per user
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.total_users}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Opportunities</CardTitle>
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.total_opportunities}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Target Companies</CardTitle>
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.total_target_companies}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">AI Coach Today</CardTitle>
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.ai_coach_usage_today}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.ai_coach_unique_users_today} unique users
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* AI Coach Rate Limiting Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  AI Coach Usage (Last 7 Days)
-                </CardTitle>
-                <CardDescription>
-                  Rate limiting statistics per user
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {stats.rate_limit_details && stats.rate_limit_details.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-2 font-medium">User</th>
-                          <th className="text-left py-3 px-2 font-medium">Date</th>
-                          <th className="text-right py-3 px-2 font-medium">Requests</th>
-                          <th className="text-right py-3 px-2 font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {stats.rate_limit_details.map((detail, index) => (
-                          <tr key={index} className="border-b last:border-0">
-                            <td className="py-3 px-2">
-                              <span className="text-muted-foreground">{detail.email}</span>
-                            </td>
-                            <td className="py-3 px-2">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                {format(new Date(detail.reset_date), 'MMM d, yyyy')}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 text-right font-mono">
-                              {detail.request_count} / 10
-                            </td>
-                            <td className="py-3 px-2 text-right">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                detail.request_count >= 10 
-                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                  : detail.request_count >= 7
-                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                  : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                              }`}>
-                                {detail.request_count >= 10 ? 'Limit Reached' : detail.request_count >= 7 ? 'High Usage' : 'Normal'}
-                              </span>
-                            </td>
+                  {stats.rate_limit_details && stats.rate_limit_details.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 font-medium">User</th>
+                            <th className="text-left py-3 px-2 font-medium">Date</th>
+                            <th className="text-right py-3 px-2 font-medium">Requests</th>
+                            <th className="text-right py-3 px-2 font-medium">Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No AI Coach usage in the last 7 days
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                        </thead>
+                        <tbody>
+                          {stats.rate_limit_details.map((detail, index) => (
+                            <tr key={index} className="border-b last:border-0">
+                              <td className="py-3 px-2">
+                                <span className="text-muted-foreground">{detail.email}</span>
+                              </td>
+                              <td className="py-3 px-2">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                                  {format(new Date(detail.reset_date), 'MMM d, yyyy')}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 text-right font-mono">
+                                {detail.request_count} / 10
+                              </td>
+                              <td className="py-3 px-2 text-right">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  detail.request_count >= 10 
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                    : detail.request_count >= 7
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                }`}>
+                                  {detail.request_count >= 10 ? 'Limit Reached' : detail.request_count >= 7 ? 'High Usage' : 'Normal'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      No AI Coach usage in the last 7 days
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="users">
+              <AdminUserManagement />
+            </TabsContent>
+
+            <TabsContent value="audit">
+              <AuditLogViewer logs={stats.recent_audit_logs} />
+            </TabsContent>
+          </Tabs>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             Failed to load statistics
