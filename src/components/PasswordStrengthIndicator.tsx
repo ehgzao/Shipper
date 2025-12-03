@@ -12,19 +12,19 @@ interface Requirement {
 
 export const PasswordStrengthIndicator = ({ password }: PasswordStrengthIndicatorProps) => {
   const requirements: Requirement[] = useMemo(() => [
-    { label: "Mínimo 8 caracteres", met: password.length >= 8 },
-    { label: "Uma letra maiúscula", met: /[A-Z]/.test(password) },
-    { label: "Um número", met: /[0-9]/.test(password) },
-    { label: "Um caractere especial", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+    { label: "Minimum 8 characters", met: password.length >= 8 },
+    { label: "One uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "One number", met: /[0-9]/.test(password) },
+    { label: "One special character", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
   ], [password]);
 
   const strength = useMemo(() => {
     const metCount = requirements.filter(r => r.met).length;
     if (metCount === 0) return { level: 0, label: "", color: "bg-muted" };
-    if (metCount === 1) return { level: 1, label: "Fraca", color: "bg-destructive" };
-    if (metCount === 2) return { level: 2, label: "Razoável", color: "bg-warning" };
-    if (metCount === 3) return { level: 3, label: "Boa", color: "bg-status-applied" };
-    return { level: 4, label: "Forte", color: "bg-status-offer" };
+    if (metCount === 1) return { level: 1, label: "Weak", color: "bg-destructive" };
+    if (metCount === 2) return { level: 2, label: "Fair", color: "bg-warning" };
+    if (metCount === 3) return { level: 3, label: "Good", color: "bg-status-applied" };
+    return { level: 4, label: "Strong", color: "bg-status-offer" };
   }, [requirements]);
 
   if (!password) return null;
@@ -50,7 +50,7 @@ export const PasswordStrengthIndicator = ({ password }: PasswordStrengthIndicato
             strength.level === 3 ? "text-status-applied" :
             "text-status-offer"
           }`}>
-            Força: {strength.label}
+            Strength: {strength.label}
           </p>
         )}
       </div>

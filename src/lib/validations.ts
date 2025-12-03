@@ -1,35 +1,35 @@
 import { z } from "zod";
 
 // URL validation - optional but must be valid format if provided
-const optionalUrl = z.string().max(500, "URL deve ter no máximo 500 caracteres").refine(
+const optionalUrl = z.string().max(500, "URL must be at most 500 characters").refine(
   (val) => !val || val.startsWith("http://") || val.startsWith("https://"),
-  "URL deve começar com http:// ou https://"
+  "URL must start with http:// or https://"
 ).optional().or(z.literal(""));
 
 // Common text field limits
-const shortText = z.string().max(100, "Máximo de 100 caracteres").trim();
-const mediumText = z.string().max(255, "Máximo de 255 caracteres").trim();
-const longText = z.string().max(2000, "Máximo de 2000 caracteres").trim();
+const shortText = z.string().max(100, "Maximum 100 characters").trim();
+const mediumText = z.string().max(255, "Maximum 255 characters").trim();
+const longText = z.string().max(2000, "Maximum 2000 characters").trim();
 
 // Login form validation
 export const loginSchema = z.object({
-  email: z.string().email("Email inválido").max(255, "Email deve ter no máximo 255 caracteres"),
-  password: z.string().min(1, "Senha é obrigatória"),
+  email: z.string().email("Invalid email").max(255, "Email must be at most 255 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
 // Signup form validation
 export const signupSchema = z.object({
-  name: mediumText.min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido").max(255, "Email deve ter no máximo 255 caracteres"),
+  name: mediumText.min(1, "Name is required"),
+  email: z.string().email("Invalid email").max(255, "Email must be at most 255 characters"),
   password: z.string()
-    .min(8, "Senha deve ter pelo menos 8 caracteres")
-    .regex(/[A-Z]/, "Senha deve conter pelo menos uma letra maiúscula")
-    .regex(/[0-9]/, "Senha deve conter pelo menos um número"),
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não conferem",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
@@ -37,8 +37,8 @@ export type SignupFormData = z.infer<typeof signupSchema>;
 
 // Opportunity form validation
 export const opportunitySchema = z.object({
-  companyName: shortText.min(1, "Empresa é obrigatória"),
-  roleTitle: shortText.min(1, "Cargo é obrigatório"),
+  companyName: shortText.min(1, "Company is required"),
+  roleTitle: shortText.min(1, "Role is required"),
   jobUrl: optionalUrl,
   location: mediumText.optional().or(z.literal("")),
   salaryRange: shortText.optional().or(z.literal("")),
@@ -46,7 +46,7 @@ export const opportunitySchema = z.object({
   contactLinkedin: optionalUrl,
   nextAction: mediumText.optional().or(z.literal("")),
   notes: longText.optional().or(z.literal("")),
-  tags: z.array(z.string().max(50, "Tag deve ter no máximo 50 caracteres")).max(20, "Máximo de 20 tags"),
+  tags: z.array(z.string().max(50, "Tag must be at most 50 characters")).max(20, "Maximum 20 tags"),
 });
 
 export type OpportunityFormData = z.infer<typeof opportunitySchema>;
@@ -54,9 +54,9 @@ export type OpportunityFormData = z.infer<typeof opportunitySchema>;
 // Profile settings validation
 export const profileSettingsSchema = z.object({
   fullName: mediumText.optional().or(z.literal("")),
-  yearsTotal: z.number().min(0, "Deve ser maior ou igual a 0").max(50, "Máximo de 50 anos"),
-  yearsProduct: z.number().min(0, "Deve ser maior ou igual a 0").max(50, "Máximo de 50 anos"),
-  targetRoles: z.array(z.string().max(100, "Cargo deve ter no máximo 100 caracteres")).max(20, "Máximo de 20 cargos"),
+  yearsTotal: z.number().min(0, "Must be greater than or equal to 0").max(50, "Maximum 50 years"),
+  yearsProduct: z.number().min(0, "Must be greater than or equal to 0").max(50, "Maximum 50 years"),
+  targetRoles: z.array(z.string().max(100, "Role must be at most 100 characters")).max(20, "Maximum 20 roles"),
 });
 
 export type ProfileSettingsFormData = z.infer<typeof profileSettingsSchema>;
@@ -64,12 +64,12 @@ export type ProfileSettingsFormData = z.infer<typeof profileSettingsSchema>;
 // Password change validation
 export const passwordChangeSchema = z.object({
   newPassword: z.string()
-    .min(8, "Senha deve ter pelo menos 8 caracteres")
-    .regex(/[A-Z]/, "Senha deve conter pelo menos uma letra maiúscula")
-    .regex(/[0-9]/, "Senha deve conter pelo menos um número"),
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "As senhas não conferem",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
@@ -83,5 +83,5 @@ export function getValidationError<T>(schema: z.ZodSchema<T>, data: unknown): st
     return null;
   }
   
-  return result.error.errors[0]?.message || "Erro de validação";
+  return result.error.errors[0]?.message || "Validation error";
 }
