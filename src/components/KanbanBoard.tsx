@@ -49,8 +49,7 @@ const COLUMNS: KanbanColumn[] = [
   { id: "researching", title: "Researching", color: "bg-muted-foreground", borderColor: "border-muted-foreground", dragHint: "Researching jobs? Drag cards here" },
   { id: "applied", title: "Applied", color: "bg-status-applied", borderColor: "border-status-applied", dragHint: "Applied to a job? Drag card here" },
   { id: "interviewing", title: "Interviewing", color: "bg-status-interviewing", borderColor: "border-status-interviewing", dragHint: "Scheduled an interview? Drag card here" },
-  { id: "technical_test", title: "Technical Test", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Received a technical test? Drag card here" },
-  { id: "final_interview", title: "Final Interview", color: "bg-pink-500", borderColor: "border-pink-500", dragHint: "Advanced to final interview? Drag card here" },
+  { id: "assessment", title: "Assessment", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Have a test or case study? Drag card here" },
   { id: "offer", title: "Offer", color: "bg-status-offer", borderColor: "border-status-offer", dragHint: "Received an offer? Congrats! Drag card here 🎉" },
   { id: "trash", title: "Trash", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
 ];
@@ -59,12 +58,6 @@ interface KanbanBoardProps {
   opportunities: Opportunity[];
   onOpportunityClick: (opportunity: Opportunity) => void;
   onUpdate: () => void;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (opportunity: Opportunity) => void;
-  onUpdateTags?: (id: string, tags: string[]) => void;
-  onUpdateRole?: (id: string, role: string) => void;
-  onFreeze?: (id: string, frozen: boolean) => void;
-  allTags?: string[];
   selectedIds?: Set<string>;
   onSelect?: (id: string, selected: boolean) => void;
   selectionMode?: boolean;
@@ -74,12 +67,6 @@ export const KanbanBoard = ({
   opportunities, 
   onOpportunityClick, 
   onUpdate,
-  onDelete,
-  onDuplicate,
-  onUpdateTags,
-  onUpdateRole,
-  onFreeze,
-  allTags,
   selectedIds = new Set(),
   onSelect,
   selectionMode = false
@@ -265,7 +252,7 @@ export const KanbanBoard = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
           {COLUMNS.map((column) => {
             const columnOpportunities = getOpportunitiesByStatus(column.id);
             
@@ -276,12 +263,6 @@ export const KanbanBoard = ({
                 opportunities={columnOpportunities}
                 onOpportunityClick={onOpportunityClick}
                 isDragging={!!activeId}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-                onUpdateTags={onUpdateTags}
-                onUpdateRole={onUpdateRole}
-                onFreeze={onFreeze}
-                allTags={allTags}
                 selectedIds={selectedIds}
                 onSelect={onSelect}
                 selectionMode={selectionMode}
@@ -332,12 +313,6 @@ interface KanbanColumnProps {
   opportunities: Opportunity[];
   onOpportunityClick: (opportunity: Opportunity) => void;
   isDragging: boolean;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (opportunity: Opportunity) => void;
-  onUpdateTags?: (id: string, tags: string[]) => void;
-  onUpdateRole?: (id: string, role: string) => void;
-  onFreeze?: (id: string, frozen: boolean) => void;
-  allTags?: string[];
   selectedIds?: Set<string>;
   onSelect?: (id: string, selected: boolean) => void;
   selectionMode?: boolean;
@@ -348,12 +323,6 @@ const KanbanColumn = ({
   opportunities, 
   onOpportunityClick, 
   isDragging,
-  onDelete,
-  onDuplicate,
-  onUpdateTags,
-  onUpdateRole,
-  onFreeze,
-  allTags,
   selectedIds = new Set(),
   onSelect,
   selectionMode = false
@@ -444,12 +413,6 @@ const KanbanColumn = ({
                 <OpportunityCard
                   opportunity={opportunity}
                   onClick={() => onOpportunityClick(opportunity)}
-                  onDelete={onDelete}
-                  onDuplicate={onDuplicate}
-                  onUpdateTags={onUpdateTags}
-                  onUpdateRole={onUpdateRole}
-                  onFreeze={onFreeze}
-                  allTags={allTags}
                   isSelected={selectedIds.has(opportunity.id)}
                   onSelect={onSelect}
                   selectionMode={selectionMode}
