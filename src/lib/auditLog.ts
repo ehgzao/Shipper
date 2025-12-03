@@ -68,20 +68,28 @@ export interface LoginAttemptResult {
   };
 }
 
-// Send security alert to admins
+// Send security alert to admins (requires authentication)
 const sendSecurityAlert = async (
   alertType: string,
   targetEmail: string,
   details?: Record<string, unknown>
 ) => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add auth header if user is authenticated
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-security-alerts`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           alert_type: alertType,
           target_email: targetEmail,
@@ -98,7 +106,7 @@ const sendSecurityAlert = async (
   }
 };
 
-// Send security alert to user
+// Send security alert to user (requires authentication)
 export const sendUserSecurityAlert = async (
   alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed' | '2fa_enabled' | '2fa_disabled',
   userEmail: string,
@@ -106,13 +114,21 @@ export const sendUserSecurityAlert = async (
   details?: Record<string, unknown>
 ) => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add auth header if user is authenticated
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-user-security-alert`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           alert_type: alertType,
           user_email: userEmail,
