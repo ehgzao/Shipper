@@ -308,6 +308,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          is_current: boolean | null
+          last_active_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -317,10 +371,12 @@ export type Database = {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: boolean
       }
+      get_admin_stats: { Args: never; Returns: Json }
       get_ai_coach_remaining_requests: {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: number
       }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
@@ -331,6 +387,7 @@ export type Database = {
         | "marketing"
         | "consulting"
         | "other"
+      app_role_admin: "admin" | "user"
       company_type: "tech_giant" | "scaleup" | "startup"
       opportunity_status:
         | "researching"
@@ -487,6 +544,7 @@ export const Constants = {
         "consulting",
         "other",
       ],
+      app_role_admin: ["admin", "user"],
       company_type: ["tech_giant", "scaleup", "startup"],
       opportunity_status: [
         "researching",
