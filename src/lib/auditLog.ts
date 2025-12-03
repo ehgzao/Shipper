@@ -100,7 +100,7 @@ const sendSecurityAlert = async (
 
 // Send security alert to user
 export const sendUserSecurityAlert = async (
-  alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed',
+  alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed' | '2fa_enabled' | '2fa_disabled',
   userEmail: string,
   userName?: string,
   details?: Record<string, unknown>

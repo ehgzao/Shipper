@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 interface UserSecurityAlertRequest {
-  alert_type: "account_locked" | "suspicious_login" | "new_device_login" | "password_changed";
+  alert_type: "account_locked" | "suspicious_login" | "new_device_login" | "password_changed" | "2fa_enabled" | "2fa_disabled";
   user_email: string;
   user_name?: string;
   details?: Record<string, unknown>;
@@ -121,6 +121,51 @@ const getAlertEmailContent = (
               <li>Contact support immediately</li>
               <li>Try to reset your password</li>
               <li>Check your email account for unauthorized access</li>
+            </ul>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+              This is an automated security alert from Shipper.
+            </p>
+          </div>
+        `,
+      };
+    
+    case "2fa_enabled":
+      return {
+        subject: "🔐 Two-Factor Authentication Enabled on Your Shipper Account",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #16a34a; margin-bottom: 20px;">2FA Successfully Enabled</h1>
+            <p>Hi ${displayName},</p>
+            <p>Two-factor authentication has been successfully enabled on your Shipper account.</p>
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
+            </div>
+            <p>Your account is now more secure! You'll need to enter a verification code from your authenticator app when signing in.</p>
+            <p><strong>Important:</strong> Make sure to save your backup codes in a safe place.</p>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+              If you didn't make this change, contact support immediately.
+            </p>
+          </div>
+        `,
+      };
+    
+    case "2fa_disabled":
+      return {
+        subject: "⚠️ Two-Factor Authentication Disabled on Your Shipper Account",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #d97706; margin-bottom: 20px;">2FA Has Been Disabled</h1>
+            <p>Hi ${displayName},</p>
+            <p>Two-factor authentication has been disabled on your Shipper account.</p>
+            <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
+            </div>
+            <p><strong>Your account is now less secure.</strong> We recommend keeping 2FA enabled to protect your account.</p>
+            <p><strong>If you didn't make this change:</strong></p>
+            <ul>
+              <li>Change your password immediately</li>
+              <li>Re-enable two-factor authentication</li>
+              <li>Contact support if you need assistance</li>
             </ul>
             <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
               This is an automated security alert from Shipper.

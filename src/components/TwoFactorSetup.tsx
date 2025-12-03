@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, ShieldCheck, ShieldOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { createAuditLog } from "@/lib/auditLog";
+import { createAuditLog, sendUserSecurityAlert } from "@/lib/auditLog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TwoFactorSetupProps {
   onStatusChange?: (enabled: boolean) => void;
@@ -22,6 +23,7 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     checkMFAStatus();
@@ -95,6 +97,13 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
 
       // Log the action
       await createAuditLog('2fa_enabled', {});
+      
+      // Send security alert to user
+      if (user?.email) {
+        sendUserSecurityAlert('2fa_enabled', user.email, undefined, {
+          timestamp: new Date().toISOString(),
+        });
+      }
 
       toast({
         title: "2FA Enabled",
@@ -124,6 +133,13 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
 
       // Log the action
       await createAuditLog('2fa_disabled', {});
+      
+      // Send security alert to user
+      if (user?.email) {
+        sendUserSecurityAlert('2fa_disabled', user.email, undefined, {
+          timestamp: new Date().toISOString(),
+        });
+      }
 
       toast({
         title: "2FA Disabled",
