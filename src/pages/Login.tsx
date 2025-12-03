@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Ship, Mail, Lock, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { loginSchema, getValidationError } from "@/lib/validations";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -23,6 +24,18 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate with Zod schema
+    const validationError = getValidationError(loginSchema, { email, password });
+    if (validationError) {
+      toast({
+        title: "Erro de validação",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     const { error } = await signIn(email, password);

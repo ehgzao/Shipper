@@ -7,6 +7,7 @@ import { Ship, Mail, Lock, User, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
+import { signupSchema, getValidationError } from "@/lib/validations";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -27,37 +28,12 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password.length < 8) {
+    // Validate with Zod schema
+    const validationError = getValidationError(signupSchema, { name, email, password, confirmPassword });
+    if (validationError) {
       toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 8 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      toast({
-        title: "Senha fraca",
-        description: "A senha deve conter pelo menos uma letra maiúscula.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!/[0-9]/.test(password)) {
-      toast({
-        title: "Senha fraca",
-        description: "A senha deve conter pelo menos um número.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Senhas não conferem",
-        description: "A senha e a confirmação devem ser iguais.",
+        title: "Erro de validação",
+        description: validationError,
         variant: "destructive",
       });
       return;

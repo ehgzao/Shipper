@@ -1,1 +1,4 @@
 project_id = "nbawvjxnzaeermsfddxx"
+
+[functions.cleanup-trash]
+verify_jwt = false
