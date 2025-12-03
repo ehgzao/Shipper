@@ -598,8 +598,6 @@ const Dashboard = () => {
               opportunities={filteredOpportunities}
               onOpportunityClick={handleOpportunityClick}
               onUpdate={fetchData}
-              onDelete={handleDeleteOpportunity}
-              onDuplicate={handleDuplicateOpportunity}
               selectedIds={selectedIds}
               onSelect={handleSelectOpportunity}
               selectionMode={selectionMode}
