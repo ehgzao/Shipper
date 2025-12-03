@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/useTheme";
 import type { Database } from "@/integrations/supabase/types";
 import { profileSettingsSchema, passwordChangeSchema, getValidationError } from "@/lib/validations";
+import { createAuditLog } from "@/lib/auditLog";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -255,6 +256,9 @@ const Settings = () => {
         variant: "destructive",
       });
     } else {
+      // Log the password change
+      await createAuditLog('password_changed', {});
+      
       toast({
         title: "Password changed!",
         description: "Your password has been updated successfully.",

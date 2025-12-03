@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { createAuditLog } from "@/lib/auditLog";
 
 interface Session {
   id: string;
@@ -104,6 +105,9 @@ const SessionManagement = () => {
 
       if (error) throw error;
 
+      // Log the action
+      await createAuditLog('session_revoked', { session_id: sessionToRevoke.session_id });
+
       // If it's the current session, sign out
       if (sessionToRevoke.is_current) {
         await supabase.auth.signOut();
@@ -140,6 +144,9 @@ const SessionManagement = () => {
         .neq('session_id', currentSessionId);
 
       if (error) throw error;
+
+      // Log the action
+      await createAuditLog('session_revoked_all', {});
 
       setSessions(prev => prev.filter(s => s.is_current));
 

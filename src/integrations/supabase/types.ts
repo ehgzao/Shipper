@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_lockouts: {
+        Row: {
+          created_at: string
+          email: string
+          failed_attempts: number
+          id: string
+          locked_until: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          failed_attempts?: number
+          id?: string
+          locked_until: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          failed_attempts?: number
+          id?: string
+          locked_until?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_coach_rate_limits: {
         Row: {
           created_at: string
@@ -38,6 +65,60 @@ export type Database = {
           reset_date?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      login_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
         }
         Relationships: []
       }
@@ -367,9 +448,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          is_admin: boolean
+          user_id: string
+        }[]
+      }
+      admin_manage_role: {
+        Args: { p_action: string; p_role: string; p_target_user_id: string }
+        Returns: Json
+      }
       check_ai_coach_rate_limit: {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: boolean
+      }
+      create_audit_log: {
+        Args: { p_action: string; p_details?: Json; p_user_id: string }
+        Returns: string
       }
       get_admin_stats: { Args: never; Returns: Json }
       get_ai_coach_remaining_requests: {
@@ -377,6 +476,11 @@ export type Database = {
         Returns: number
       }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_account_locked: { Args: { p_email: string }; Returns: boolean }
+      record_login_attempt: {
+        Args: { p_email: string; p_ip_address?: string; p_success: boolean }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:

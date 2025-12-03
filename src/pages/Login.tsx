@@ -3,15 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Ship, Mail, Lock, ArrowLeft } from "lucide-react";
+import { Ship, Mail, Lock, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema, getValidationError } from "@/lib/validations";
+import { checkAccountLockout, recordLoginAttempt, createAuditLog } from "@/lib/auditLog";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockMessage, setLockMessage] = useState("");
   const { toast } = useToast();
   const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
@@ -35,12 +38,35 @@ const Login = () => {
       });
       return;
     }
+
+    // Check if account is locked
+    const locked = await checkAccountLockout(email);
+    if (locked) {
+      setIsLocked(true);
+      setLockMessage("Account temporarily locked. Please try again in 15 minutes.");
+      toast({
+        title: "Account Locked",
+        description: "Too many failed login attempts. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
     
     const { error } = await signIn(email, password);
     
     if (error) {
+      // Record failed attempt
+      const result = await recordLoginAttempt(email, false);
+      
+      if (result.locked) {
+        setIsLocked(true);
+        setLockMessage("Account temporarily locked due to too many failed attempts.");
+      } else if (result.attempts_remaining !== undefined) {
+        setLockMessage(`${result.attempts_remaining} attempts remaining before lockout.`);
+      }
+
       toast({
         title: "Erro ao entrar",
         description: error.message === "Invalid login credentials" 
@@ -49,6 +75,10 @@ const Login = () => {
         variant: "destructive",
       });
     } else {
+      // Record successful attempt (clears lockout)
+      await recordLoginAttempt(email, true);
+      await createAuditLog('login_success', { email });
+      
       toast({
         title: "Bem-vindo de volta!",
         description: "Login realizado com sucesso.",
@@ -118,9 +148,16 @@ const Login = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked}>
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
+
+            {lockMessage && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {lockMessage}
+              </div>
+            )}
 
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
