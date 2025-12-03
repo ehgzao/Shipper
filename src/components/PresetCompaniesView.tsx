@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Database, Plus, Check, Filter } from "lucide-react";
+import { Database, Plus, Check, Filter, X } from "lucide-react";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -50,6 +50,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
   const [addingCompanies, setAddingCompanies] = useState<Set<string>>(new Set());
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [showBanner, setShowBanner] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -157,13 +158,22 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
     );
   }
 
+
   return (
     <div className="space-y-6">
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-        <p className="text-sm text-muted-foreground">
-          Explore our curated company database and add them to your target companies to track opportunities.
-        </p>
-      </div>
+      {showBanner && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 relative">
+          <button
+            onClick={() => setShowBanner(false)}
+            className="absolute top-2 right-2 p-1 hover:bg-muted rounded transition-colors"
+          >
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <p className="text-sm text-muted-foreground pr-6">
+            Explore our curated company database and add them to your target companies to track opportunities.
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
@@ -206,7 +216,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
           })}
         </div>
 
-        {/* Type filter */}
+        {/* Type filter - using fixed labels matching onboarding */}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedType(null)}
@@ -218,7 +228,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
           >
             All types
           </button>
-          {companyTypes.map((type) => (
+          {(["tech_giant", "scaleup", "startup"] as const).map((type) => (
             <button
               key={type}
               onClick={() => setSelectedType(selectedType === type ? null : type)}
@@ -228,7 +238,7 @@ export const PresetCompaniesView = ({ userId, existingCompanyNames, onCompanyAdd
                   : "bg-background border-border hover:bg-muted"
               }`}
             >
-              {getTypeLabel(type)}
+              {type === "tech_giant" ? "Tech Giants" : type === "scaleup" ? "Scaleups" : "Startups"}
             </button>
           ))}
         </div>

@@ -74,7 +74,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showOpportunityModal, setShowOpportunityModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
-  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all" });
+  const [filters, setFilters] = useState({ seniority: "all", workModel: "all", company: "all", tag: "all", country: "all", companyType: "all" });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -107,6 +107,15 @@ const Dashboard = () => {
     return [...countries].sort();
   }, [opportunities]);
 
+  // Get unique company types from target companies (for opportunities with matching company names)
+  const allCompanyTypes = useMemo(() => {
+    const types = new Set<string>();
+    targetCompanies.forEach(tc => {
+      if (tc.company_type) types.add(tc.company_type);
+    });
+    return [...types];
+  }, [targetCompanies]);
+
   // Filter opportunities
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(o => {
@@ -114,7 +123,12 @@ const Dashboard = () => {
       if (filters.workModel !== "all" && o.work_model !== filters.workModel) return false;
       if (filters.company !== "all" && o.company_name !== filters.company) return false;
       if (filters.tag !== "all" && o.opportunity_tag !== filters.tag) return false;
-      if (filters.country !== "all" && o.location?.toLowerCase() !== filters.country) return false;
+      if (filters.country !== "all" && !o.location?.toLowerCase().includes(filters.country)) return false;
+      // Filter by company type - check if company exists in target companies with that type
+      if (filters.companyType && filters.companyType !== "all") {
+        const matchingCompany = targetCompanies.find(tc => tc.company_name === o.company_name);
+        if (!matchingCompany || matchingCompany.company_type !== filters.companyType) return false;
+      }
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -125,7 +139,7 @@ const Dashboard = () => {
       }
       return true;
     });
-  }, [opportunities, filters, searchQuery]);
+  }, [opportunities, filters, searchQuery, targetCompanies]);
 
   // Filter target companies by search
   const filteredTargetCompanies = useMemo(() => {
@@ -591,6 +605,7 @@ const Dashboard = () => {
               companies={companyNames}
               tags={allTags}
               countries={allCountries}
+              companyTypes={allCompanyTypes}
               filters={filters}
               onFiltersChange={setFilters}
             />
