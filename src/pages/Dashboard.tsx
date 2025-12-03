@@ -103,9 +103,11 @@ const Dashboard = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearCompaniesConfirm, setShowClearCompaniesConfirm] = useState(false);
   const [showCompanyNotification, setShowCompanyNotification] = useState(true);
   const [showTrashBin, setShowTrashBin] = useState(false);
   const [deletedOpportunities, setDeletedOpportunities] = useState<Opportunity[]>([]);
+  const [currentTab, setCurrentTab] = useState("pipeline");
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -327,6 +329,30 @@ const Dashboard = () => {
     }
   };
 
+  const handleBulkRestoreOpportunities = async (ids: string[]) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        is_deleted: false,
+        deleted_at: null
+      })
+      .in("id", ids);
+
+    if (error) {
+      toast({
+        title: "Error restoring",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Opportunities restored",
+        description: `${ids.length} opportunities were restored to your pipeline.`,
+      });
+      fetchData();
+    }
+  };
+
   const handlePermanentDelete = async (id: string) => {
     const { error } = await supabase
       .from("opportunities")
@@ -521,6 +547,48 @@ const Dashboard = () => {
     });
   };
 
+  const handleExportTargetCompanies = () => {
+    const exportData = {
+      targetCompanies,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shipper-companies-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Companies exported",
+      description: "Your target companies have been downloaded.",
+    });
+  };
+
+  const handleClearTargetCompanies = async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("target_companies")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({
+        title: "Error clearing companies",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Companies cleared",
+        description: "All target companies were removed.",
+      });
+      fetchData();
+    }
+    setShowClearCompaniesConfirm(false);
+  };
+
   const handleCreateOpportunityFromCompany = async (company: TargetCompany, role?: string) => {
     if (!user) return;
 
@@ -686,7 +754,7 @@ const Dashboard = () => {
           />
         </div>
 
-        <Tabs defaultValue="pipeline" className="w-full">
+        <Tabs defaultValue="pipeline" className="w-full" onValueChange={setCurrentTab}>
           <div className="flex items-center justify-between mb-6">
             <TabsList className="bg-background border border-border">
               <TabsTrigger value="pipeline" className="gap-2">
@@ -713,29 +781,66 @@ const Dashboard = () => {
               </TabsTrigger>
             </TabsList>
             
-            {/* Header Buttons */}
+            {/* Header Buttons - Contextual */}
             <div className="flex items-center gap-2">
-              <Button className="gap-2" onClick={handleNewOpportunity}>
-                <Plus className="h-4 w-4" />
-                New
-              </Button>
+              {currentTab === "pipeline" && (
+                <>
+                  <Button className="gap-2" onClick={handleNewOpportunity}>
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
 
-              {/* Trash Bin Button */}
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="relative"
-                onClick={() => setShowTrashBin(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-                {deletedOpportunities.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-medium min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
-                    {deletedOpportunities.length}
-                  </span>
-                )}
-              </Button>
-              
-              {opportunities.length > 0 && (
+                  {/* Trash Bin Button - Only on Pipeline */}
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="relative"
+                    onClick={() => setShowTrashBin(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deletedOpportunities.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-medium min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                        {deletedOpportunities.length}
+                      </span>
+                    )}
+                  </Button>
+                  
+                  {opportunities.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectionMode(!selectionMode);
+                            if (selectionMode) handleClearSelection();
+                          }}
+                        >
+                          <CheckSquare className="h-4 w-4 mr-2" />
+                          {selectionMode ? "Cancel Selection" : "Select Multiple"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setShowClearConfirm(true)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Clear Pipeline
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleExportData}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Data
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
+              )}
+
+              {currentTab === "companies" && targetCompanies.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -744,25 +849,15 @@ const Dashboard = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => {
-                        setSelectionMode(!selectionMode);
-                        if (selectionMode) handleClearSelection();
-                      }}
-                    >
-                      <CheckSquare className="h-4 w-4 mr-2" />
-                      {selectionMode ? "Cancel Selection" : "Select Multiple"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() => setShowClearConfirm(true)}
+                      onClick={() => setShowClearCompaniesConfirm(true)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Clear Pipeline
+                      Clear Target Companies
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportData}>
+                    <DropdownMenuItem onClick={handleExportTargetCompanies}>
                       <Download className="h-4 w-4 mr-2" />
-                      Export Data
+                      Export Companies
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -780,7 +875,7 @@ const Dashboard = () => {
               />
             )}
             <StaleNotifications 
-              opportunities={opportunities}
+              opportunities={opportunities.filter(o => !["rejected", "ghosted", "withdrawn"].includes(o.status || ""))}
               onOpportunityClick={handleOpportunityClick}
             />
             <PipelineFilters 
@@ -870,6 +965,28 @@ const Dashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Clear Target Companies Confirmation Dialog */}
+      <AlertDialog open={showClearCompaniesConfirm} onOpenChange={setShowClearCompaniesConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all target companies?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete <strong>all {targetCompanies.length} target companies</strong> from your list.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleClearTargetCompanies}
+            >
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Bulk Delete Confirmation Dialog */}
       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <AlertDialogContent>
@@ -906,6 +1023,7 @@ const Dashboard = () => {
         onOpenChange={setShowTrashBin}
         deletedOpportunities={deletedOpportunities}
         onRestore={handleRestoreOpportunity}
+        onBulkRestore={handleBulkRestoreOpportunities}
         onPermanentDelete={handlePermanentDelete}
         onEmptyTrash={handleEmptyTrash}
       />
