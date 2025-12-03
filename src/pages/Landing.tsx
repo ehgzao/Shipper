@@ -31,8 +31,8 @@ const Landing = () => {
           <div className="flex justify-center mb-6">
             <Ship className="h-16 w-16 text-primary animate-float" />
           </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-fade-up">Shipping opportunities for Product People</h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-4 animate-fade-up delay-100">Ship opportunities for Product People</p>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-fade-up">SHIPPER</h1>
+          <p className="text-xl md:text-2xl text-muted-foreground mb-4 animate-fade-up delay-100">Shipping opportunities for Product People</p>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-up delay-200">The job tracker built for Product People who believe in quality over quantity.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up delay-300">
             <Button asChild size="xl" variant="hero">
