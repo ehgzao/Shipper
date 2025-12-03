@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Ship, Target, BarChart3, Sparkles, Check, ArrowRight, Users, Globe, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
-import featurePipelineMockup from "@/assets/feature-pipeline-mockup.png";
+import featurePipelineScreenshot from "@/assets/feature-pipeline-screenshot.png";
 import featureMatchAiReal from "@/assets/feature-match-ai-real.png";
 const Landing = () => {
   return <div className="min-h-screen bg-background">
@@ -110,7 +110,7 @@ const Landing = () => {
               </div>
               <div className="flex-1 lg:flex-[1.2]">
                 <div className="rounded-xl overflow-hidden shadow-2xl border border-border/50">
-                  <img src={featurePipelineMockup} alt="Target List and Pipeline features" className="w-full h-auto object-cover" />
+                  <img src={featurePipelineScreenshot} alt="Target List and Pipeline features" className="w-full h-auto object-cover" />
                 </div>
               </div>
             </div>
