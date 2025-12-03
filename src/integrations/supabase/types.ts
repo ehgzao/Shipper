@@ -24,6 +24,7 @@ export type Database = {
           display_order: number | null
           fit_level: number | null
           id: string
+          is_favorite: boolean | null
           job_url: string | null
           location: string | null
           match_breakdown: Json | null
@@ -32,6 +33,7 @@ export type Database = {
           next_action_date: string | null
           notes: string | null
           opportunity_tag: string | null
+          previous_status: string | null
           required_skills: string[] | null
           required_years_experience: number | null
           role_title: string
@@ -53,6 +55,7 @@ export type Database = {
           display_order?: number | null
           fit_level?: number | null
           id?: string
+          is_favorite?: boolean | null
           job_url?: string | null
           location?: string | null
           match_breakdown?: Json | null
@@ -61,6 +64,7 @@ export type Database = {
           next_action_date?: string | null
           notes?: string | null
           opportunity_tag?: string | null
+          previous_status?: string | null
           required_skills?: string[] | null
           required_years_experience?: number | null
           role_title: string
@@ -84,6 +88,7 @@ export type Database = {
           display_order?: number | null
           fit_level?: number | null
           id?: string
+          is_favorite?: boolean | null
           job_url?: string | null
           location?: string | null
           match_breakdown?: Json | null
@@ -92,6 +97,7 @@ export type Database = {
           next_action_date?: string | null
           notes?: string | null
           opportunity_tag?: string | null
+          previous_status?: string | null
           required_skills?: string[] | null
           required_years_experience?: number | null
           role_title?: string
@@ -221,9 +227,12 @@ export type Database = {
           created_at: string | null
           display_order: number | null
           id: string
+          is_favorite: boolean | null
           is_preset: boolean | null
           last_checked_at: string | null
           notes: string | null
+          notes_updated_at: string | null
+          research_notes: string | null
           sector: string | null
           user_id: string
         }
@@ -235,9 +244,12 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          is_favorite?: boolean | null
           is_preset?: boolean | null
           last_checked_at?: string | null
           notes?: string | null
+          notes_updated_at?: string | null
+          research_notes?: string | null
           sector?: string | null
           user_id: string
         }
@@ -249,9 +261,12 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          is_favorite?: boolean | null
           is_preset?: boolean | null
           last_checked_at?: string | null
           notes?: string | null
+          notes_updated_at?: string | null
+          research_notes?: string | null
           sector?: string | null
           user_id?: string
         }
