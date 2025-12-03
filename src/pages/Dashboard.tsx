@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,9 +109,25 @@ const Dashboard = () => {
   const [showTrashBin, setShowTrashBin] = useState(false);
   const [deletedOpportunities, setDeletedOpportunities] = useState<Opportunity[]>([]);
   const [currentTab, setCurrentTab] = useState("pipeline");
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      setIsAdmin(!!data);
+    };
+    checkAdmin();
+  }, [user]);
 
   // Get unique company names for filter
   const companyNames = useMemo(() => {
@@ -718,6 +734,13 @@ const Dashboard = () => {
                   <Settings className="h-5 w-5" />
                 </Link>
               </Button>
+              {isAdmin && (
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to="/admin">
+                    <Shield className="h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
               <ThemeToggle />
               <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-5 w-5" />
