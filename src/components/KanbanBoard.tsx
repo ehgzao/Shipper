@@ -184,14 +184,21 @@ export const KanbanBoard = ({
         ? Math.max(...targetColumnOpps.map(o => o.display_order || 0)) + 1 
         : 0;
 
+      // Save previous status when moving to archived
+      const updateData: Record<string, unknown> = {
+        status: targetColumnId as OpportunityStatus,
+        applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at,
+        updated_at: new Date().toISOString(),
+        display_order: maxOrder
+      };
+
+      if (isArchivedTarget) {
+        updateData.previous_status = opportunity.status;
+      }
+
       const { error } = await supabase
         .from("opportunities")
-        .update({ 
-          status: targetColumnId as OpportunityStatus,
-          applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at,
-          updated_at: new Date().toISOString(),
-          display_order: maxOrder
-        })
+        .update(updateData)
         .eq("id", opportunityId);
 
       if (error) {
@@ -250,11 +257,15 @@ export const KanbanBoard = ({
   };
 
   const handleRestore = async (opportunityId: string) => {
+    const opportunity = opportunities.find(o => o.id === opportunityId);
+    const restoreStatus = (opportunity?.previous_status as OpportunityStatus) || "researching";
+    
     const { error } = await supabase
       .from("opportunities")
       .update({ 
-        status: "researching" as OpportunityStatus,
-        updated_at: new Date().toISOString()
+        status: restoreStatus,
+        updated_at: new Date().toISOString(),
+        previous_status: null
       })
       .eq("id", opportunityId);
 
@@ -267,7 +278,7 @@ export const KanbanBoard = ({
     } else {
       toast({
         title: "Opportunity restored",
-        description: "Moved back to Researching",
+        description: `Moved back to ${restoreStatus}`,
       });
       onUpdate();
     }
@@ -357,11 +368,11 @@ const TrashColumn = ({ isDragging }: { isDragging: boolean }) => {
   return (
     <div 
       ref={setNodeRef}
-      className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-200 ${
+      className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[200px] md:min-h-[300px] transition-all duration-200 ${
         isOver 
           ? "border-destructive bg-destructive/10 scale-[1.02] shadow-lg" 
           : isDragging 
-            ? "border-destructive/60" 
+            ? "border-destructive/60 bg-destructive/5" 
             : "border-border"
       }`}
     >
@@ -369,8 +380,8 @@ const TrashColumn = ({ isDragging }: { isDragging: boolean }) => {
         <Trash2 className={`h-5 w-5 transition-colors ${isOver ? "text-destructive" : "text-muted-foreground"}`} />
         <h3 className={`font-medium transition-colors ${isOver ? "text-destructive" : ""}`}>Trash</h3>
       </div>
-      <div className={`flex flex-col items-center justify-center py-8 text-sm transition-colors ${isOver ? "text-destructive" : "text-muted-foreground"}`}>
-        <Trash2 className={`h-12 w-12 mb-2 transition-colors ${isOver ? "text-destructive" : "text-muted-foreground/30"}`} />
+      <div className={`flex flex-col items-center justify-center py-4 md:py-8 text-sm transition-colors ${isOver ? "text-destructive" : "text-muted-foreground"}`}>
+        <Trash2 className={`h-8 w-8 md:h-12 md:w-12 mb-2 transition-colors ${isOver ? "text-destructive" : "text-muted-foreground/30"}`} />
         <p className="font-medium">{isOver ? "Drop to delete!" : "Drag to delete"}</p>
         {isOver && <p className="text-xs mt-1">⚠️ You'll need to confirm</p>}
       </div>

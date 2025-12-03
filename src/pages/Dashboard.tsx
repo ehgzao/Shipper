@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical, Archive } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ import { PipelineFilters } from "@/components/PipelineFilters";
 import { PresetCompaniesView } from "@/components/PresetCompaniesView";
 import { SearchInput } from "@/components/SearchInput";
 import { StatusCounters } from "@/components/StatusCounters";
+import { ArchivedViewDialog } from "@/components/ArchivedViewDialog";
 
 interface Profile {
   id: string;
@@ -102,6 +103,7 @@ const Dashboard = () => {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showCompanyNotification, setShowCompanyNotification] = useState(true);
+  const [showArchivedView, setShowArchivedView] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -646,6 +648,11 @@ const Dashboard = () => {
                       <Download className="h-4 w-4 mr-2" />
                       Export Data
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowArchivedView(true)}>
+                      <Archive className="h-4 w-4 mr-2" />
+                      View Archived
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -780,6 +787,32 @@ const Dashboard = () => {
         onClearSelection={handleClearSelection}
         onMoveToStatus={handleBulkMoveToStatus}
         onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
+      />
+
+      {/* Archived View Dialog */}
+      <ArchivedViewDialog
+        open={showArchivedView}
+        onOpenChange={setShowArchivedView}
+        opportunities={opportunities.filter(o => ["rejected", "ghosted", "withdrawn"].includes(o.status || ""))}
+        onOpportunityClick={handleOpportunityClick}
+        onRestore={async (opportunityId) => {
+          const opp = opportunities.find(o => o.id === opportunityId);
+          const restoreStatus = (opp?.previous_status as SupabaseDB["public"]["Enums"]["opportunity_status"]) || "researching";
+          await supabase
+            .from("opportunities")
+            .update({ 
+              status: restoreStatus,
+              updated_at: new Date().toISOString(),
+              previous_status: null
+            })
+            .eq("id", opportunityId);
+          toast({
+            title: "Opportunity restored",
+            description: `Moved back to ${restoreStatus}`,
+          });
+          fetchData();
+        }}
+        onDelete={handleDeleteOpportunity}
       />
     </div>
   );

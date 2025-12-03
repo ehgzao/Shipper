@@ -302,38 +302,45 @@ export const OpportunityCard = ({
             <FitIndicator />
             
             {/* Row 5: Tag - clickable dropdown */}
-            <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  {tagConfig ? (
-                    <Badge 
-                      className={`text-[10px] px-1.5 py-0 h-5 font-medium border-0 cursor-pointer hover:opacity-80 transition-opacity ${tagConfig.bg} ${tagConfig.text}`}
-                    >
-                      <span className="mr-0.5">{tagConfig.icon}</span>
-                      {tagConfig.label}
-                    </Badge>
-                  ) : (
-                    <Badge 
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer hover:bg-muted border-dashed transition-colors"
-                    >
-                      + Tag
-                    </Badge>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="bg-popover z-50">
-                  {TAG_OPTIONS.map((tag) => (
-                    <DropdownMenuItem 
-                      key={tag.value} 
-                      onClick={(e) => handleTagChange(tag.value, e)}
-                    >
-                      {tag.icon && <span className="mr-2">{tag.icon}</span>}
-                      {tag.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger 
+                onClick={(e) => e.stopPropagation()} 
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                className="focus:outline-none"
+              >
+                {tagConfig ? (
+                  <Badge 
+                    className={`text-[10px] px-1.5 py-0 h-5 font-medium border-0 cursor-pointer hover:opacity-80 transition-opacity ${tagConfig.bg} ${tagConfig.text}`}
+                  >
+                    <span className="mr-0.5">{tagConfig.icon}</span>
+                    {tagConfig.label}
+                  </Badge>
+                ) : (
+                  <Badge 
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer hover:bg-muted border-dashed transition-colors"
+                  >
+                    + Tag
+                  </Badge>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="bg-popover z-[100]"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {TAG_OPTIONS.map((tag) => (
+                  <DropdownMenuItem 
+                    key={tag.value} 
+                    onClick={(e) => handleTagChange(tag.value, e)}
+                  >
+                    {tag.icon && <span className="mr-2">{tag.icon}</span>}
+                    {tag.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {/* Row 6: Last updated */}
             {updatedText && (
