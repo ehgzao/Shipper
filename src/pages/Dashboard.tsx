@@ -75,6 +75,7 @@ interface Profile {
   skills: string[] | null;
   target_roles: string[] | null;
   verification_frequency_days: number | null;
+  kanban_sort_preference: string | null;
 }
 
 interface TargetCompany {
@@ -266,6 +267,19 @@ const Dashboard = () => {
 
   const handleOpportunitySaved = () => {
     fetchData();
+  };
+
+  const handleSortPreferenceChange = async (sortOption: string) => {
+    if (!user) return;
+    
+    // Optimistically update local state
+    setProfile(prev => prev ? { ...prev, kanban_sort_preference: sortOption } : null);
+    
+    // Save to database
+    await supabase
+      .from("profiles")
+      .update({ kanban_sort_preference: sortOption })
+      .eq("id", user.id);
   };
 
   const handleDeleteOpportunity = async (id: string) => {
@@ -893,6 +907,8 @@ const Dashboard = () => {
               selectedIds={selectedIds}
               onSelect={handleSelectOpportunity}
               selectionMode={selectionMode}
+              sortPreference={profile?.kanban_sort_preference}
+              onSortChange={handleSortPreferenceChange}
             />
           </TabsContent>
           

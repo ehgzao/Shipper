@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -87,6 +87,8 @@ interface KanbanBoardProps {
   selectedIds?: Set<string>;
   onSelect?: (id: string, selected: boolean) => void;
   selectionMode?: boolean;
+  sortPreference?: string | null;
+  onSortChange?: (sort: SortOption) => void;
 }
 
 // Forward onUpdate for card inline edits
@@ -100,12 +102,26 @@ export const KanbanBoard = ({
   onUpdate,
   selectedIds = new Set(),
   onSelect,
-  selectionMode = false
+  selectionMode = false,
+  sortPreference,
+  onSortChange
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>("manual");
+  const [sortOption, setSortOption] = useState<SortOption>((sortPreference as SortOption) || "manual");
   const { toast } = useToast();
+
+  // Sync with external preference when it changes
+  useEffect(() => {
+    if (sortPreference && sortPreference !== sortOption) {
+      setSortOption(sortPreference as SortOption);
+    }
+  }, [sortPreference]);
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortOption(newSort);
+    onSortChange?.(newSort);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -307,7 +323,7 @@ export const KanbanBoard = ({
               {SORT_OPTIONS.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => setSortOption(option.value)}
+                  onClick={() => handleSortChange(option.value)}
                   className={`gap-2 text-xs ${sortOption === option.value ? 'bg-accent' : ''}`}
                 >
                   {option.icon}
