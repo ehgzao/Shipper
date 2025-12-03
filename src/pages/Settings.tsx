@@ -219,6 +219,11 @@ const Settings = () => {
         variant: "destructive",
       });
     } else {
+      // Log the profile update
+      await createAuditLog('profile_updated', {
+        updated_fields: ['full_name', 'experience', 'background', 'strength', 'countries', 'company_stages', 'target_roles']
+      });
+      
       toast({
         title: "Profile updated!",
         description: "Your changes have been saved.",
