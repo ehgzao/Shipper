@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Trash2, ChevronRight, ChevronDown, Archive } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,8 +53,6 @@ const ACTIVE_COLUMNS: KanbanColumn[] = [
   { id: "offer", title: "Offer", color: "bg-green-500", borderColor: "border-green-500", dragHint: "Received an offer? Congrats! 🎉" },
 ];
 
-const ARCHIVED_STATUSES: OpportunityStatus[] = ["rejected", "ghosted", "withdrawn"];
-
 const TRASH_COLUMN: KanbanColumn = {
   id: "trash",
   title: "Trash",
@@ -87,7 +85,6 @@ export const KanbanBoard = ({
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
-  const [archivedExpanded, setArchivedExpanded] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -101,10 +98,6 @@ export const KanbanBoard = ({
       .filter(o => o.status === status)
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   };
-
-  const archivedOpportunities = opportunities
-    .filter(o => ARCHIVED_STATUSES.includes(o.status as OpportunityStatus))
-    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -130,13 +123,9 @@ export const KanbanBoard = ({
     // Check if dropped on a column directly
     let targetColumnId: string | null = null;
     const isActiveColumn = ACTIVE_COLUMNS.find(col => col.id === overId);
-    const isArchivedDrop = overId === "archived";
     
     if (isActiveColumn) {
       targetColumnId = isActiveColumn.id;
-    } else if (isArchivedDrop) {
-      // Dropped on archived column - set to rejected by default
-      targetColumnId = "rejected";
     } else {
       // Check if dropped on another opportunity card
       const targetOpportunity = opportunities.find(o => o.id === overId);
@@ -145,10 +134,7 @@ export const KanbanBoard = ({
         
         // Handle reordering within the same column
         if (opportunity.status === targetColumnId) {
-          const isArchivedStatus = ARCHIVED_STATUSES.includes(targetColumnId as OpportunityStatus);
-          const columnOpportunities = isArchivedStatus 
-            ? archivedOpportunities 
-            : getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+          const columnOpportunities = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
           
           const oldIndex = columnOpportunities.findIndex(o => o.id === opportunityId);
           const newIndex = columnOpportunities.findIndex(o => o.id === overId);
@@ -175,26 +161,18 @@ export const KanbanBoard = ({
     }
 
     if (targetColumnId && opportunity.status !== targetColumnId) {
-      const isArchivedTarget = ARCHIVED_STATUSES.includes(targetColumnId as OpportunityStatus);
-      const targetColumnOpps = isArchivedTarget 
-        ? archivedOpportunities 
-        : getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+      const targetColumnOpps = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
       
       const maxOrder = targetColumnOpps.length > 0 
         ? Math.max(...targetColumnOpps.map(o => o.display_order || 0)) + 1 
         : 0;
 
-      // Save previous status when moving to archived
       const updateData: Record<string, unknown> = {
         status: targetColumnId as OpportunityStatus,
         applied_at: targetColumnId === "applied" ? new Date().toISOString() : opportunity.applied_at,
         updated_at: new Date().toISOString(),
         display_order: maxOrder
       };
-
-      if (isArchivedTarget) {
-        updateData.previous_status = opportunity.status;
-      }
 
       const { error } = await supabase
         .from("opportunities")
@@ -260,34 +238,6 @@ export const KanbanBoard = ({
     setPendingTrashOpportunity(null);
   };
 
-  const handleRestore = async (opportunityId: string) => {
-    const opportunity = opportunities.find(o => o.id === opportunityId);
-    const restoreStatus = (opportunity?.previous_status as OpportunityStatus) || "researching";
-    
-    const { error } = await supabase
-      .from("opportunities")
-      .update({ 
-        status: restoreStatus,
-        updated_at: new Date().toISOString(),
-        previous_status: null
-      })
-      .eq("id", opportunityId);
-
-    if (error) {
-      toast({
-        title: "Error restoring",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Opportunity restored",
-        description: `Moved back to ${restoreStatus}`,
-      });
-      onUpdate();
-    }
-  };
-
   const activeOpportunity = activeId ? opportunities.find(o => o.id === activeId) : null;
 
   return (
@@ -318,18 +268,6 @@ export const KanbanBoard = ({
           <TrashColumn isDragging={!!activeId} />
         </div>
 
-        {/* Archived Section */}
-        <ArchivedSection
-          opportunities={archivedOpportunities}
-          expanded={archivedExpanded}
-          onToggle={() => setArchivedExpanded(!archivedExpanded)}
-          onOpportunityClick={onOpportunityClick}
-          onRestore={handleRestore}
-          isDragging={!!activeId}
-          selectedIds={selectedIds}
-          onSelect={onSelect}
-          selectionMode={selectionMode}
-        />
 
         <DragOverlay>
           {activeOpportunity ? (
@@ -347,7 +285,7 @@ export const KanbanBoard = ({
             <AlertDialogTitle>Delete opportunity?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete the opportunity at <strong>{pendingTrashOpportunity?.company_name}</strong> ({pendingTrashOpportunity?.role_title})?
-              This action cannot be undone.
+              You can restore it later from the Trash Bin.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -389,165 +327,6 @@ const TrashColumn = ({ isDragging }: { isDragging: boolean }) => {
         <p className="font-medium">{isOver ? "Drop to delete!" : "Drag to delete"}</p>
         {isOver && <p className="text-xs mt-1">⚠️ You'll need to confirm</p>}
       </div>
-    </div>
-  );
-};
-
-// Archived Section Component
-interface ArchivedSectionProps {
-  opportunities: Opportunity[];
-  expanded: boolean;
-  onToggle: () => void;
-  onOpportunityClick: (opportunity: Opportunity) => void;
-  onRestore: (opportunityId: string) => void;
-  isDragging: boolean;
-  selectedIds?: Set<string>;
-  onSelect?: (id: string, selected: boolean) => void;
-  selectionMode?: boolean;
-}
-
-const ArchivedSection = ({ 
-  opportunities, 
-  expanded, 
-  onToggle, 
-  onOpportunityClick, 
-  onRestore,
-  isDragging,
-  selectedIds = new Set(),
-  onSelect,
-  selectionMode = false
-}: ArchivedSectionProps) => {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { setNodeRef, isOver } = useDroppable({ id: "archived" });
-
-  const filteredOpportunities = statusFilter === "all" 
-    ? opportunities 
-    : opportunities.filter(o => o.status === statusFilter);
-
-  const statusCounts = {
-    rejected: opportunities.filter(o => o.status === "rejected").length,
-    ghosted: opportunities.filter(o => o.status === "ghosted").length,
-    withdrawn: opportunities.filter(o => o.status === "withdrawn").length,
-  };
-
-  if (opportunities.length === 0 && !isDragging) return null;
-
-  return (
-    <div 
-      ref={setNodeRef}
-      className={`mt-4 bg-background rounded-xl border-2 transition-all duration-200 ${
-        isOver ? "border-gray-400 bg-gray-50 dark:bg-gray-900/50" : "border-border"
-      }`}
-    >
-      {/* Header - always visible */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 rounded-t-xl transition-colors"
-      >
-        {expanded ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        )}
-        <Archive className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium text-sm">Archived</span>
-        <span className="text-muted-foreground text-xs ml-1">({opportunities.length})</span>
-        {isDragging && !expanded && (
-          <span className="text-xs text-muted-foreground ml-auto">
-            Drop here to archive
-          </span>
-        )}
-      </button>
-
-      {/* Content - collapsed/expanded */}
-      {expanded && (
-        <div className="p-3 pt-0">
-          {/* Status filter tabs */}
-          <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-border">
-            <button
-              onClick={(e) => { e.stopPropagation(); setStatusFilter("all"); }}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                statusFilter === "all"
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
-            >
-              All ({opportunities.length})
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setStatusFilter("rejected"); }}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                statusFilter === "rejected"
-                  ? "bg-red-500 text-white border-red-500"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
-            >
-              Rejected ({statusCounts.rejected})
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setStatusFilter("ghosted"); }}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                statusFilter === "ghosted"
-                  ? "bg-gray-500 text-white border-gray-500"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
-            >
-              Ghosted ({statusCounts.ghosted})
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setStatusFilter("withdrawn"); }}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                statusFilter === "withdrawn"
-                  ? "bg-amber-500 text-white border-amber-500"
-                  : "bg-background border-border hover:bg-muted"
-              }`}
-            >
-              Withdrawn ({statusCounts.withdrawn})
-            </button>
-          </div>
-
-          <SortableContext
-            items={filteredOpportunities.map(o => o.id)}
-            strategy={verticalListSortingStrategy}
-            id="archived"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-              {filteredOpportunities.map((opportunity, index) => (
-                <div 
-                  key={opportunity.id}
-                  className="animate-fade-in relative group"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <OpportunityCard
-                    opportunity={opportunity}
-                    onClick={() => onOpportunityClick(opportunity)}
-                    showArchivedBadge={true}
-                    isSelected={selectedIds.has(opportunity.id)}
-                    onSelect={onSelect}
-                    selectionMode={selectionMode}
-                  />
-                  {/* Restore button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRestore(opportunity.id);
-                    }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md shadow-sm hover:bg-primary/90"
-                  >
-                    Restore
-                  </button>
-                </div>
-              ))}
-            </div>
-          </SortableContext>
-          
-          {filteredOpportunities.length === 0 && (
-            <div className="text-center py-6 text-muted-foreground text-sm">
-              No {statusFilter !== "all" ? statusFilter : "archived"} opportunities
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
