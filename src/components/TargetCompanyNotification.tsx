@@ -9,8 +9,14 @@ interface TargetCompany {
   last_checked_at: string | null;
 }
 
+interface Opportunity {
+  company_name: string;
+  is_deleted?: boolean | null;
+}
+
 interface TargetCompanyNotificationProps {
   companies: TargetCompany[];
+  opportunities: Opportunity[];
   verificationDays: number;
   onCheckCareers: (companyId: string, careersUrl: string) => void;
   onDismiss: () => void;
@@ -18,13 +24,24 @@ interface TargetCompanyNotificationProps {
 
 export const TargetCompanyNotification = ({
   companies,
+  opportunities,
   verificationDays,
   onCheckCareers,
   onDismiss,
 }: TargetCompanyNotificationProps) => {
   const now = new Date();
   
+  // Get company names that have active opportunities in the pipeline
+  const companiesWithActiveOpportunities = new Set(
+    opportunities
+      .filter(o => !o.is_deleted)
+      .map(o => o.company_name.toLowerCase())
+  );
+  
   const uncheckedCompanies = companies.filter((company) => {
+    // Only include companies that have active opportunities
+    if (!companiesWithActiveOpportunities.has(company.company_name.toLowerCase())) return false;
+    
     if (!company.careers_url) return false;
     if (!company.last_checked_at) return true;
     
