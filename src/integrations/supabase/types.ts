@@ -98,6 +98,33 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_codes: {
+        Row: {
+          code_hash: string
+          created_at: string | null
+          id: string
+          used: boolean | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string | null
+          id?: string
+          used?: boolean | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string | null
+          id?: string
+          used?: boolean | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       login_attempts: {
         Row: {
           city: string | null
@@ -347,6 +374,39 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_emails: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          updated_at: string | null
+          user_id: string
+          verification_token: string | null
+          verified: boolean | null
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          verification_token?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          verification_token?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       target_companies: {
         Row: {
           careers_url: string | null
@@ -492,6 +552,7 @@ export type Database = {
         Args: { p_action: string; p_details?: Json; p_user_id: string }
         Returns: string
       }
+      generate_verification_token: { Args: never; Returns: string }
       get_admin_stats: { Args: never; Returns: Json }
       get_ai_coach_remaining_requests: {
         Args: { p_daily_limit?: number; p_user_id: string }
@@ -503,6 +564,7 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: Json
       }
+      verify_recovery_email: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
       app_role:
