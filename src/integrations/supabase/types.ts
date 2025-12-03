@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_coach_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          request_count: number
+          reset_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          reset_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          reset_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           applied_at: string | null
@@ -286,7 +313,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_ai_coach_rate_limit: {
+        Args: { p_daily_limit?: number; p_user_id: string }
+        Returns: boolean
+      }
+      get_ai_coach_remaining_requests: {
+        Args: { p_daily_limit?: number; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role:
