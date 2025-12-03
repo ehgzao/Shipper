@@ -63,6 +63,7 @@ interface TargetCompany {
   country: string;
   sector: string | null;
   careers_url: string | null;
+  last_checked_at: string | null;
 }
 
 const Dashboard = () => {
@@ -444,6 +445,39 @@ const Dashboard = () => {
     }
   };
 
+  const handleCheckCareers = async (companyId: string, careersUrl: string) => {
+    window.open(careersUrl, '_blank');
+    
+    await supabase
+      .from("target_companies")
+      .update({ last_checked_at: new Date().toISOString() })
+      .eq("id", companyId);
+    
+    fetchData();
+  };
+
+  const handleCheckAllCareers = async () => {
+    const companiesWithUrls = targetCompanies.filter(c => c.careers_url);
+    
+    for (const company of companiesWithUrls) {
+      window.open(company.careers_url!, '_blank');
+    }
+    
+    const ids = companiesWithUrls.map(c => c.id);
+    if (ids.length > 0) {
+      await supabase
+        .from("target_companies")
+        .update({ last_checked_at: new Date().toISOString() })
+        .in("id", ids);
+      
+      toast({
+        title: "Careers checked",
+        description: `Opened ${companiesWithUrls.length} career pages.`,
+      });
+      fetchData();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
@@ -625,6 +659,8 @@ const Dashboard = () => {
               opportunities={opportunities}
               onCreateOpportunity={handleCreateOpportunityFromCompany}
               onDeleteCompany={handleDeleteTargetCompany}
+              onCheckCareers={handleCheckCareers}
+              onCheckAllCareers={handleCheckAllCareers}
             />
           </TabsContent>
 
@@ -714,6 +750,8 @@ interface CompaniesViewProps {
   opportunities: Opportunity[];
   onCreateOpportunity: (company: TargetCompany, role?: string) => void;
   onDeleteCompany: (companyId: string) => void;
+  onCheckCareers: (companyId: string, careersUrl: string) => void;
+  onCheckAllCareers: () => void;
 }
 
 const FLAG_IMAGES: Record<string, string> = {
@@ -734,7 +772,7 @@ const countryMap: Record<string, { name: string; code: string }> = {
   netherlands: { name: "Netherlands", code: "NL" },
 };
 
-const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany }: CompaniesViewProps) => {
+const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDeleteCompany, onCheckCareers, onCheckAllCareers }: CompaniesViewProps) => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<TargetCompany | null>(null);
@@ -760,6 +798,21 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
       default: return type;
     }
   };
+
+  const getLastCheckedText = (lastCheckedAt: string | null) => {
+    if (!lastCheckedAt) return "Never checked";
+    try {
+      const date = new Date(lastCheckedAt);
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return "Checked today";
+      if (diffDays === 1) return "Checked yesterday";
+      if (diffDays < 7) return `Checked ${diffDays} days ago`;
+      return `Checked ${Math.floor(diffDays / 7)} weeks ago`;
+    } catch { return "Never checked"; }
+  };
+
+  const companiesWithUrls = companies.filter(c => c.careers_url);
 
   // Get unique countries and types for filters
   const countries = useMemo(() => {
@@ -808,72 +861,86 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
   return (
     <div className="space-y-6">
       {/* Filters - matching Explore design */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          Filters:
-        </div>
-        
-        {/* Country filter */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCountry(null)}
-            className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
-              selectedCountry === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted"
-            }`}
-          >
-            All countries
-          </button>
-          {countries.map((country) => {
-            const info = countryMap[country];
-            const code = info?.code || country.toUpperCase().slice(0, 2);
-            return (
-              <button
-                key={country}
-                onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
-                className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
-                  selectedCountry === country
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background border-border hover:bg-muted"
-                }`}
-              >
-                {FLAG_IMAGES[code] && (
-                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
-                )}
-                {info?.name || country}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Type filter */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedType(null)}
-            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-              selectedType === null
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted"
-            }`}
-          >
-            All types
-          </button>
-          {(["tech_giant", "scaleup", "startup"] as const).map((type) => (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="h-4 w-4" />
+            Filters:
+          </div>
+          
+          {/* Country filter */}
+          <div className="flex flex-wrap gap-2">
             <button
-              key={type}
-              onClick={() => setSelectedType(selectedType === type ? null : type)}
-              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                selectedType === type
+              onClick={() => setSelectedCountry(null)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+                selectedCountry === null
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-background border-border hover:bg-muted"
               }`}
             >
-              {getTypeLabel(type)}
+              All countries
             </button>
-          ))}
+            {countries.map((country) => {
+              const info = countryMap[country];
+              const code = info?.code || country.toUpperCase().slice(0, 2);
+              return (
+                <button
+                  key={country}
+                  onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+                    selectedCountry === country
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:bg-muted"
+                  }`}
+                >
+                  {FLAG_IMAGES[code] && (
+                    <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
+                  )}
+                  {info?.name || country}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Type filter */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedType(null)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                selectedType === null
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              All types
+            </button>
+            {(["tech_giant", "scaleup", "startup"] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedType(selectedType === type ? null : type)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  selectedType === type
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted"
+                }`}
+              >
+                {getTypeLabel(type)}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Bulk check button */}
+        {companiesWithUrls.length > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={onCheckAllCareers}
+            className="gap-1.5"
+          >
+            Check All Careers ({companiesWithUrls.length})
+          </Button>
+        )}
       </div>
 
       {/* Companies by Country - matching Explore design */}
@@ -912,16 +979,21 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                           </span>
                         )}
                       </div>
-                      {company.sector && (
-                        <p className="text-sm text-muted-foreground mt-1">{company.sector}</p>
-                      )}
+                      <div className="flex items-center gap-3 mt-1">
+                        {company.sector && (
+                          <p className="text-sm text-muted-foreground">{company.sector}</p>
+                        )}
+                        <span className="text-xs text-muted-foreground/70">
+                          {getLastCheckedText(company.last_checked_at)}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {company.careers_url && (
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => window.open(company.careers_url!, '_blank')}
+                          onClick={() => onCheckCareers(company.id, company.careers_url!)}
                         >
                           View Jobs
                         </Button>

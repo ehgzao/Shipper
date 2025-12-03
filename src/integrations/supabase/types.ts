@@ -22,6 +22,7 @@ export type Database = {
           contact_name: string | null
           created_at: string | null
           display_order: number | null
+          fit_level: number | null
           id: string
           job_url: string | null
           location: string | null
@@ -30,6 +31,7 @@ export type Database = {
           next_action: string | null
           next_action_date: string | null
           notes: string | null
+          opportunity_tag: string | null
           required_skills: string[] | null
           required_years_experience: number | null
           role_title: string
@@ -49,6 +51,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string | null
           display_order?: number | null
+          fit_level?: number | null
           id?: string
           job_url?: string | null
           location?: string | null
@@ -57,6 +60,7 @@ export type Database = {
           next_action?: string | null
           next_action_date?: string | null
           notes?: string | null
+          opportunity_tag?: string | null
           required_skills?: string[] | null
           required_years_experience?: number | null
           role_title: string
@@ -78,6 +82,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string | null
           display_order?: number | null
+          fit_level?: number | null
           id?: string
           job_url?: string | null
           location?: string | null
@@ -86,6 +91,7 @@ export type Database = {
           next_action?: string | null
           next_action_date?: string | null
           notes?: string | null
+          opportunity_tag?: string | null
           required_skills?: string[] | null
           required_years_experience?: number | null
           role_title?: string
