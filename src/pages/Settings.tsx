@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw, Sun, Moon, Monitor, Shield } from "lucide-react";
 import TwoFactorSetup from "@/components/TwoFactorSetup";
 import SessionManagement from "@/components/SessionManagement";
+import RateLimitVisualization from "@/components/RateLimitVisualization";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -699,6 +701,7 @@ const Settings = () => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
                 />
+                <PasswordStrengthIndicator password={newPassword} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
@@ -709,6 +712,9 @@ const Settings = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                 />
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-xs text-destructive">Passwords don't match</p>
+                )}
               </div>
               <Button 
                 onClick={handleChangePassword} 
@@ -740,6 +746,9 @@ const Settings = () => {
               </p>
             </CardContent>
           </Card>
+
+          {/* AI Coach Usage */}
+          <RateLimitVisualization />
 
           {/* Security Section */}
           <div className="space-y-6">
