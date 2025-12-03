@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw, Sun, Moon, Monitor } from "lucide-react";
+import { Ship, ArrowLeft, Save, KeyRound, Mail, User, Settings as SettingsIcon, Briefcase, X, Plus, RotateCcw, Sun, Moon, Monitor, Shield } from "lucide-react";
+import TwoFactorSetup from "@/components/TwoFactorSetup";
+import SessionManagement from "@/components/SessionManagement";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -709,6 +711,20 @@ const Settings = () => {
               </p>
             </CardContent>
           </Card>
+
+          {/* Security Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Security</h2>
+            </div>
+            
+            {/* Two-Factor Authentication */}
+            <TwoFactorSetup />
+            
+            {/* Session Management */}
+            <SessionManagement />
+          </div>
 
           {/* Restart Onboarding Section */}
           <Card>
