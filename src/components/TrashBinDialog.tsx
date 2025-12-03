@@ -19,10 +19,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RotateCcw, Trash2, MapPin, Briefcase } from "lucide-react";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { RotateCcw, Trash2, MapPin, Briefcase, Clock } from "lucide-react";
+import { format, formatDistanceToNow, parseISO, differenceInDays, addDays } from "date-fns";
 import type { Opportunity } from "./OpportunityModal";
 
+const AUTO_DELETE_DAYS = 30;
 interface TrashBinDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -102,6 +103,18 @@ export const TrashBinDialog = ({
     }
   };
 
+  const getDaysUntilAutoDelete = (deletedAt: string | null) => {
+    if (!deletedAt) return AUTO_DELETE_DAYS;
+    try {
+      const deletedDate = parseISO(deletedAt);
+      const autoDeleteDate = addDays(deletedDate, AUTO_DELETE_DAYS);
+      const daysRemaining = differenceInDays(autoDeleteDate, new Date());
+      return Math.max(0, daysRemaining);
+    } catch {
+      return AUTO_DELETE_DAYS;
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,92 +164,108 @@ export const TrashBinDialog = ({
                 <p className="text-sm mt-1">Deleted opportunities will appear here</p>
               </div>
             ) : (
-              deletedOpportunities.map((opportunity) => {
-                const statusConfig = STATUS_LABELS[opportunity.status || "researching"];
-                const deletedDate = getDeletedDate(opportunity.deleted_at);
-                const deletedTimeAgo = getDeletedTimeText(opportunity.deleted_at);
+              <>
+                {/* Auto-delete notice */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 mb-3">
+                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Items are automatically deleted after 30 days in trash
+                  </p>
+                </div>
+                {deletedOpportunities.map((opportunity) => {
+                  const statusConfig = STATUS_LABELS[opportunity.status || "researching"];
+                  const deletedDate = getDeletedDate(opportunity.deleted_at);
+                  const deletedTimeAgo = getDeletedTimeText(opportunity.deleted_at);
+                  const daysUntilDelete = getDaysUntilAutoDelete(opportunity.deleted_at);
 
-                return (
-                  <div
-                    key={opportunity.id}
-                    className={`bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors border ${selectedIds.has(opportunity.id) ? 'border-primary' : 'border-border/50'}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Checkbox */}
-                      <Checkbox
-                        checked={selectedIds.has(opportunity.id)}
-                        onCheckedChange={() => handleToggleSelect(opportunity.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h4 className="font-semibold text-sm">{opportunity.company_name}</h4>
-                          {statusConfig && (
-                            <Badge className={`text-[10px] px-1.5 py-0 h-5 ${statusConfig.color}`}>
-                              {statusConfig.label}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {/* Role */}
-                        <p className="text-sm text-foreground mb-2">{opportunity.role_title}</p>
-                        
-                        {/* Details */}
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          {opportunity.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {opportunity.location}
+                  return (
+                    <div
+                      key={opportunity.id}
+                      className={`bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors border ${selectedIds.has(opportunity.id) ? 'border-primary' : 'border-border/50'}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Checkbox */}
+                        <Checkbox
+                          checked={selectedIds.has(opportunity.id)}
+                          onCheckedChange={() => handleToggleSelect(opportunity.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          {/* Header */}
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h4 className="font-semibold text-sm">{opportunity.company_name}</h4>
+                            {statusConfig && (
+                              <Badge className={`text-[10px] px-1.5 py-0 h-5 ${statusConfig.color}`}>
+                                {statusConfig.label}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Role */}
+                          <p className="text-sm text-foreground mb-2">{opportunity.role_title}</p>
+                          
+                          {/* Details */}
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            {opportunity.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {opportunity.location}
+                              </span>
+                            )}
+                            {opportunity.work_model && (
+                              <span className="flex items-center gap-1">
+                                <Briefcase className="h-3 w-3" />
+                                {opportunity.work_model}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Deleted info with auto-delete countdown */}
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50 flex-wrap">
+                            <Trash2 className="h-3 w-3 text-destructive/70" />
+                            <span className="text-xs text-destructive/70">
+                              Deleted {deletedTimeAgo}
                             </span>
-                          )}
-                          {opportunity.work_model && (
-                            <span className="flex items-center gap-1">
-                              <Briefcase className="h-3 w-3" />
-                              {opportunity.work_model}
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              daysUntilDelete <= 7 
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' 
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            }`}>
+                              {daysUntilDelete === 0 
+                                ? 'Deleting today' 
+                                : daysUntilDelete === 1 
+                                  ? 'Deletes in 1 day' 
+                                  : `Deletes in ${daysUntilDelete} days`}
                             </span>
-                          )}
+                          </div>
                         </div>
 
-                        {/* Deleted info */}
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
-                          <Trash2 className="h-3 w-3 text-destructive/70" />
-                          <span className="text-xs text-destructive/70">
-                            Deleted {deletedTimeAgo}
-                          </span>
-                          {deletedDate && (
-                            <span className="text-xs text-muted-foreground/50">
-                              ({deletedDate})
-                            </span>
-                          )}
+                        {/* Actions */}
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1 text-xs"
+                            onClick={() => onRestore(opportunity.id)}
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Restore
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setItemToDelete(opportunity.id)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
                         </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1 text-xs"
-                          onClick={() => onRestore(opportunity.id)}
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                          Restore
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setItemToDelete(opportunity.id)}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </>
             )}
           </div>
 
