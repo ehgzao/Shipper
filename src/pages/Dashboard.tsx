@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -746,8 +746,27 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
     }
   };
 
-  // Group by country
-  const groupedCompanies = companies.reduce((acc, company) => {
+  // Get unique countries and types for filters
+  const countries = useMemo(() => {
+    return [...new Set(companies.map(c => c.country.toLowerCase()))];
+  }, [companies]);
+
+  const companyTypes = useMemo(() => {
+    return [...new Set(companies.map(c => c.company_type).filter(Boolean))];
+  }, [companies]);
+
+  // Filter companies
+  const filteredCompanies = useMemo(() => {
+    return companies.filter(c => {
+      const country = c.country.toLowerCase();
+      if (selectedCountry && country !== selectedCountry) return false;
+      if (selectedType && c.company_type !== selectedType) return false;
+      return true;
+    });
+  }, [companies, selectedCountry, selectedType]);
+
+  // Group filtered by country
+  const groupedCompanies = filteredCompanies.reduce((acc, company) => {
     const country = company.country.toLowerCase();
     if (!acc[country]) acc[country] = [];
     acc[country].push(company);
@@ -755,7 +774,6 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
   }, {} as Record<string, TargetCompany[]>);
 
   const filteredGrouped = Object.entries(groupedCompanies)
-    .filter(([country]) => !selectedCountry || country === selectedCountry)
     .map(([country, comps]) => [
       country,
       selectedType ? comps.filter(c => c.company_type === selectedType) : comps
@@ -764,110 +782,150 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
 
   if (companies.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-        <p className="text-lg font-medium">No target companies yet</p>
-        <p className="text-sm">Go to Explore to add companies to your list.</p>
+      <div className="bg-background rounded-xl border border-border p-12 text-center">
+        <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="font-semibold text-lg mb-2">No target companies yet</h3>
+        <p className="text-muted-foreground text-sm">Go to Explore to add companies to your list.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={selectedCountry === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSelectedCountry(null)}
-        >
-          All Countries
-        </Button>
-        {Object.keys(groupedCompanies).map(country => {
-          const info = countryMap[country];
-          return (
-            <Button
-              key={country}
-              variant={selectedCountry === country ? "default" : "outline"}
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setSelectedCountry(country)}
+      {/* Filters - matching Explore design */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          Filters:
+        </div>
+        
+        {/* Country filter */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCountry(null)}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+              selectedCountry === null
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            All countries
+          </button>
+          {countries.map((country) => {
+            const info = countryMap[country];
+            const code = info?.code || country.toUpperCase().slice(0, 2);
+            return (
+              <button
+                key={country}
+                onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+                  selectedCountry === country
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted"
+                }`}
+              >
+                {FLAG_IMAGES[code] && (
+                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
+                )}
+                {info?.name || country}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Type filter */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedType(null)}
+            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+              selectedType === null
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            All types
+          </button>
+          {(["tech_giant", "scaleup", "startup"] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => setSelectedType(selectedType === type ? null : type)}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                selectedType === type
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
             >
-              {info && FLAG_IMAGES[info.code] && (
-                <img src={FLAG_IMAGES[info.code]} alt={info.name} className="w-4 h-3 object-cover rounded-sm" />
-              )}
-              {info?.name || country}
-            </Button>
-          );
-        })}
+              {getTypeLabel(type)}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Companies by Country */}
+      {/* Companies by Country - matching Explore design */}
       {filteredGrouped.map(([country, comps]) => {
         const info = countryMap[country];
+        const code = info?.code || country.toUpperCase().slice(0, 2);
         return (
-          <div key={country} className="space-y-3">
-            <div className="flex items-center gap-2">
-              {info && FLAG_IMAGES[info.code] && (
-                <img src={FLAG_IMAGES[info.code]} alt={info.name} className="w-5 h-4 object-cover rounded-sm" />
-              )}
-              <h3 className="font-semibold">{info?.name || country}</h3>
-              <span className="text-muted-foreground text-sm">({comps.length})</span>
+          <div key={country} className="bg-background rounded-xl border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                {FLAG_IMAGES[code] && (
+                  <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-5 h-3.5 object-cover rounded-sm" />
+                )}
+                {info?.name || country}
+                <span className="text-muted-foreground font-normal">
+                  ({comps.length} companies)
+                </span>
+              </h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {comps.map(company => {
+            <div className="divide-y divide-border">
+              {comps.map(company => {
                 const oppCount = getOpportunityCountByCompany(company.company_name);
                 return (
-                  <div
-                    key={company.id}
-                    className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium truncate">{company.company_name}</h4>
-                        {company.sector && (
-                          <p className="text-sm text-muted-foreground truncate">{company.sector}</p>
+                  <div key={company.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-medium">{company.company_name}</h4>
+                        {company.company_type && (
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(company.company_type)}`}>
+                            {getTypeLabel(company.company_type)}
+                          </span>
+                        )}
+                        {oppCount > 0 && (
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                            {oppCount} opp{oppCount !== 1 ? 's' : ''}
+                          </span>
                         )}
                       </div>
-                      {company.company_type && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeBadgeColor(company.company_type)}`}>
-                          {getTypeLabel(company.company_type)}
-                        </span>
+                      {company.sector && (
+                        <p className="text-sm text-muted-foreground mt-1">{company.sector}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onCreateOpportunity(company)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Opportunity
-                      </Button>
+                    <div className="flex items-center gap-2">
                       {company.careers_url && (
-                        <Button
+                        <Button 
+                          variant="outline" 
                           size="sm"
-                          variant="ghost"
-                          className="text-muted-foreground"
                           onClick={() => window.open(company.careers_url!, '_blank')}
                         >
-                          <Compass className="h-3 w-3 mr-1" />
-                          Careers
+                          View Jobs
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        onClick={() => onCreateOpportunity(company)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => setCompanyToDelete(company)}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                      {oppCount > 0 && (
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {oppCount} opp{oppCount !== 1 ? 's' : ''}
-                        </span>
-                      )}
                     </div>
                   </div>
                 );

@@ -244,6 +244,30 @@ export const KanbanBoard = ({
     setPendingTrashOpportunity(null);
   };
 
+  const handleRestore = async (opportunityId: string) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ 
+        status: "researching" as OpportunityStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", opportunityId);
+
+    if (error) {
+      toast({
+        title: "Error restoring",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Opportunity restored",
+        description: "Moved back to Researching",
+      });
+      onUpdate();
+    }
+  };
+
   const activeOpportunity = activeId ? opportunities.find(o => o.id === activeId) : null;
 
   return (
@@ -279,6 +303,7 @@ export const KanbanBoard = ({
           expanded={archivedExpanded}
           onToggle={() => setArchivedExpanded(!archivedExpanded)}
           onOpportunityClick={onOpportunityClick}
+          onRestore={handleRestore}
           isDragging={!!activeId}
           selectedIds={selectedIds}
           onSelect={onSelect}
@@ -353,6 +378,7 @@ interface ArchivedSectionProps {
   expanded: boolean;
   onToggle: () => void;
   onOpportunityClick: (opportunity: Opportunity) => void;
+  onRestore: (opportunityId: string) => void;
   isDragging: boolean;
   selectedIds?: Set<string>;
   onSelect?: (id: string, selected: boolean) => void;
@@ -364,12 +390,24 @@ const ArchivedSection = ({
   expanded, 
   onToggle, 
   onOpportunityClick, 
+  onRestore,
   isDragging,
   selectedIds = new Set(),
   onSelect,
   selectionMode = false
 }: ArchivedSectionProps) => {
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const { setNodeRef, isOver } = useDroppable({ id: "archived" });
+
+  const filteredOpportunities = statusFilter === "all" 
+    ? opportunities 
+    : opportunities.filter(o => o.status === statusFilter);
+
+  const statusCounts = {
+    rejected: opportunities.filter(o => o.status === "rejected").length,
+    ghosted: opportunities.filter(o => o.status === "ghosted").length,
+    withdrawn: opportunities.filter(o => o.status === "withdrawn").length,
+  };
 
   if (opportunities.length === 0 && !isDragging) return null;
 
@@ -403,16 +441,60 @@ const ArchivedSection = ({
       {/* Content - collapsed/expanded */}
       {expanded && (
         <div className="p-3 pt-0">
+          {/* Status filter tabs */}
+          <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-border">
+            <button
+              onClick={(e) => { e.stopPropagation(); setStatusFilter("all"); }}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                statusFilter === "all"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              All ({opportunities.length})
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setStatusFilter("rejected"); }}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                statusFilter === "rejected"
+                  ? "bg-red-500 text-white border-red-500"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              Rejected ({statusCounts.rejected})
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setStatusFilter("ghosted"); }}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                statusFilter === "ghosted"
+                  ? "bg-gray-500 text-white border-gray-500"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              Ghosted ({statusCounts.ghosted})
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setStatusFilter("withdrawn"); }}
+              className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                statusFilter === "withdrawn"
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              Withdrawn ({statusCounts.withdrawn})
+            </button>
+          </div>
+
           <SortableContext
-            items={opportunities.map(o => o.id)}
+            items={filteredOpportunities.map(o => o.id)}
             strategy={verticalListSortingStrategy}
             id="archived"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-              {opportunities.map((opportunity, index) => (
+              {filteredOpportunities.map((opportunity, index) => (
                 <div 
                   key={opportunity.id}
-                  className="animate-fade-in"
+                  className="animate-fade-in relative group"
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <OpportunityCard
@@ -423,10 +505,26 @@ const ArchivedSection = ({
                     onSelect={onSelect}
                     selectionMode={selectionMode}
                   />
+                  {/* Restore button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestore(opportunity.id);
+                    }}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md shadow-sm hover:bg-primary/90"
+                  >
+                    Restore
+                  </button>
                 </div>
               ))}
             </div>
           </SortableContext>
+          
+          {filteredOpportunities.length === 0 && (
+            <div className="text-center py-6 text-muted-foreground text-sm">
+              No {statusFilter !== "all" ? statusFilter : "archived"} opportunities
+            </div>
+          )}
         </div>
       )}
     </div>
