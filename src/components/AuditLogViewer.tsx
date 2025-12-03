@@ -43,6 +43,8 @@ const getActionIcon = (action: string) => {
     case 'session_revoked':
     case 'session_revoked_all':
       return <Monitor className="h-4 w-4" />;
+    case 'profile_updated':
+      return <User className="h-4 w-4" />;
     case 'admin_role_granted':
     case 'admin_role_revoked':
       return <User className="h-4 w-4" />;
