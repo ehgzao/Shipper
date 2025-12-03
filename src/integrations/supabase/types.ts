@@ -462,6 +462,7 @@ export type Database = {
         Args: { p_action: string; p_role: string; p_target_user_id: string }
         Returns: Json
       }
+      admin_unlock_account: { Args: { p_email: string }; Returns: Json }
       check_ai_coach_rate_limit: {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: boolean
