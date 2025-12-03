@@ -98,6 +98,38 @@ const sendSecurityAlert = async (
   }
 };
 
+// Send security alert to user
+export const sendUserSecurityAlert = async (
+  alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed',
+  userEmail: string,
+  userName?: string,
+  details?: Record<string, unknown>
+) => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-user-security-alert`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alert_type: alertType,
+          user_email: userEmail,
+          user_name: userName,
+          details: details
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to send user security alert:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending user security alert:', error);
+  }
+};
+
 export const recordLoginAttempt = async (
   email: string,
   success: boolean
@@ -112,9 +144,14 @@ export const recordLoginAttempt = async (
     
     const result = data as unknown as LoginAttemptResult;
     
-    // Send security alert if needed
+    // Send security alert to admins if needed
     if (result.should_alert && result.alert_type && result.alert_details) {
       sendSecurityAlert(result.alert_type, email, result.alert_details);
+      
+      // Also send alert to user if account was locked
+      if (result.locked && result.alert_type === 'account_locked') {
+        sendUserSecurityAlert('account_locked', email, undefined, result.alert_details);
+      }
     }
     
     return result;
