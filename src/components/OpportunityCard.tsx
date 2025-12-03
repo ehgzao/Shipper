@@ -126,22 +126,21 @@ export const OpportunityCard = ({
     return null;
   };
 
-  const FitIndicator = () => {
-    const fitLevel = opportunity.fit_level || 2;
-    return (
-      <div className="flex items-center gap-0.5" title={`Fit: ${fitLevel}/3`}>
-        {[1, 2, 3].map((level) => (
-          <Star 
-            key={level} 
-            className={`h-3 w-3 transition-colors ${
-              level <= fitLevel 
-                ? "fill-amber-400 text-amber-400" 
-                : "fill-muted text-muted"
-            }`} 
-          />
-        ))}
-      </div>
-    );
+  const handleFitLevelChange = async (newLevel: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUpdating) return;
+    setIsUpdating(true);
+    
+    await supabase
+      .from("opportunities")
+      .update({ 
+        fit_level: newLevel,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", opportunity.id);
+    
+    setIsUpdating(false);
+    onUpdate?.();
   };
 
   const handleTagChange = async (newTag: string, e: React.MouseEvent) => {
@@ -178,6 +177,35 @@ export const OpportunityCard = ({
     onUpdate?.();
   };
 
+  const FitIndicator = () => {
+    const fitLevel = opportunity.fit_level || 2;
+    return (
+      <div 
+        className="flex items-center gap-0.5" 
+        title={`Fit: ${fitLevel}/3 - Click to change`}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {[1, 2, 3].map((level) => (
+          <button
+            key={level}
+            onClick={(e) => handleFitLevelChange(level, e)}
+            disabled={isUpdating}
+            className="p-0 hover:scale-110 transition-transform"
+          >
+            <Star 
+              className={`h-3.5 w-3.5 transition-colors cursor-pointer ${
+                level <= fitLevel 
+                  ? "fill-amber-400 text-amber-400 hover:fill-amber-500 hover:text-amber-500" 
+                  : "fill-muted text-muted hover:fill-amber-200 hover:text-amber-200"
+              }`} 
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   const tagKey = opportunity.opportunity_tag;
   const tagConfig = tagKey ? TAG_CONFIG[tagKey] : null;
   const updatedText = getUpdatedTimeText();
@@ -194,20 +222,30 @@ export const OpportunityCard = ({
         relative rounded-lg overflow-hidden cursor-grab active:cursor-grabbing 
         transition-all duration-200 group
         ${isFrozen 
-          ? "bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800" 
+          ? "bg-gradient-to-br from-sky-50 via-sky-100/50 to-sky-50 dark:from-sky-950/40 dark:via-sky-900/30 dark:to-sky-950/40 border border-sky-200 dark:border-sky-800 animate-pulse-subtle" 
           : "bg-card shadow-sm hover:shadow-md"
         }
         ${isDragging ? "opacity-60 shadow-xl scale-[1.02]" : "hover:-translate-y-0.5"} 
         ${isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}
       `}
     >
+      {/* Ice effect overlay for frozen cards */}
+      {isFrozen && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/30 to-transparent opacity-50" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-sky-200 dark:bg-sky-700 rounded-full blur-sm opacity-60" />
+          <div className="absolute -top-0.5 right-2 w-2 h-2 bg-sky-300 dark:bg-sky-600 rounded-full blur-sm opacity-50" />
+          <div className="absolute top-2 -right-1 w-2.5 h-2.5 bg-sky-200 dark:bg-sky-700 rounded-full blur-sm opacity-40" />
+        </div>
+      )}
+
       {/* Status color indicator */}
       <div 
         className="absolute left-0 top-0 bottom-0 w-1" 
         style={{ backgroundColor: isFrozen ? "#0ea5e9" : statusColor }} 
       />
       
-      <div className="pl-4 pr-3 py-3">
+      <div className="pl-4 pr-3 py-3 relative">
         <div className="flex items-start gap-2">
           {/* Selection checkbox */}
           {(selectionMode || isSelected) && onSelect && (
@@ -224,7 +262,7 @@ export const OpportunityCard = ({
           )}
           
           <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Row 1: Company name + Fit stars */}
+            {/* Row 1: Company name + Fit stars (clickable) */}
             <div className="flex items-center justify-between gap-2">
               <h4 className="font-semibold text-sm text-foreground truncate leading-tight">
                 {opportunity.company_name}
@@ -253,51 +291,36 @@ export const OpportunityCard = ({
             
             {/* Row 3: Tag - clickable dropdown */}
             <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-              {tagConfig ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  {tagConfig ? (
                     <Badge 
-                      className={`text-[10px] px-1.5 py-0 h-5 font-medium border-0 cursor-pointer hover:opacity-80 ${tagConfig.bg} ${tagConfig.text}`}
+                      className={`text-[10px] px-1.5 py-0 h-5 font-medium border-0 cursor-pointer hover:opacity-80 transition-opacity ${tagConfig.bg} ${tagConfig.text}`}
                     >
                       <span className="mr-0.5">{tagConfig.icon}</span>
                       {tagConfig.label}
                     </Badge>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-popover z-50">
-                    {TAG_OPTIONS.map((tag) => (
-                      <DropdownMenuItem 
-                        key={tag.value} 
-                        onClick={(e) => handleTagChange(tag.value, e)}
-                      >
-                        {tag.icon && <span className="mr-2">{tag.icon}</span>}
-                        {tag.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  ) : (
                     <Badge 
                       variant="outline"
-                      className="text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer hover:bg-muted border-dashed"
+                      className="text-[10px] px-1.5 py-0 h-5 font-medium cursor-pointer hover:bg-muted border-dashed transition-colors"
                     >
                       + Tag
                     </Badge>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-popover z-50">
-                    {TAG_OPTIONS.filter(t => t.value !== "none").map((tag) => (
-                      <DropdownMenuItem 
-                        key={tag.value} 
-                        onClick={(e) => handleTagChange(tag.value, e)}
-                      >
-                        {tag.icon && <span className="mr-2">{tag.icon}</span>}
-                        {tag.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="bg-popover z-50">
+                  {TAG_OPTIONS.map((tag) => (
+                    <DropdownMenuItem 
+                      key={tag.value} 
+                      onClick={(e) => handleTagChange(tag.value, e)}
+                    >
+                      {tag.icon && <span className="mr-2">{tag.icon}</span>}
+                      {tag.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             {/* Row 4: Country flag + name */}
@@ -327,6 +350,15 @@ export const OpportunityCard = ({
                 className="text-[10px] px-1.5 py-0 h-5 font-medium bg-muted/80"
               >
                 {ARCHIVED_STATUS_LABELS[opportunity.status]}
+              </Badge>
+            )}
+
+            {/* Frozen indicator badge */}
+            {isFrozen && (
+              <Badge 
+                className="text-[10px] px-1.5 py-0 h-5 font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 border-0"
+              >
+                🧊 Frozen
               </Badge>
             )}
           </div>
