@@ -16,8 +16,15 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowUpDown, Calendar, Star, Building2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OpportunityCard } from "./OpportunityCard";
@@ -35,6 +42,18 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type OpportunityStatus = Database["public"]["Enums"]["opportunity_status"];
+
+type SortOption = "manual" | "date_newest" | "date_oldest" | "fit_high" | "fit_low" | "company_az" | "company_za";
+
+const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[] = [
+  { value: "manual", label: "Manual Order", icon: <ArrowUpDown className="h-3.5 w-3.5" /> },
+  { value: "date_newest", label: "Newest First", icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: "date_oldest", label: "Oldest First", icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: "fit_high", label: "Highest Fit", icon: <Star className="h-3.5 w-3.5" /> },
+  { value: "fit_low", label: "Lowest Fit", icon: <Star className="h-3.5 w-3.5" /> },
+  { value: "company_az", label: "Company A-Z", icon: <Building2 className="h-3.5 w-3.5" /> },
+  { value: "company_za", label: "Company Z-A", icon: <Building2 className="h-3.5 w-3.5" /> },
+];
 
 interface KanbanColumn {
   id: OpportunityStatus | "trash";
@@ -85,6 +104,7 @@ export const KanbanBoard = ({
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
+  const [sortOption, setSortOption] = useState<SortOption>("manual");
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -92,12 +112,38 @@ export const KanbanBoard = ({
     useSensor(KeyboardSensor)
   );
 
+  const sortOpportunities = (opps: Opportunity[]): Opportunity[] => {
+    const sorted = [...opps];
+    switch (sortOption) {
+      case "date_newest":
+        return sorted.sort((a, b) => 
+          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        );
+      case "date_oldest":
+        return sorted.sort((a, b) => 
+          new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+        );
+      case "fit_high":
+        return sorted.sort((a, b) => (b.fit_level || 2) - (a.fit_level || 2));
+      case "fit_low":
+        return sorted.sort((a, b) => (a.fit_level || 2) - (b.fit_level || 2));
+      case "company_az":
+        return sorted.sort((a, b) => a.company_name.localeCompare(b.company_name));
+      case "company_za":
+        return sorted.sort((a, b) => b.company_name.localeCompare(a.company_name));
+      case "manual":
+      default:
+        return sorted.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    }
+  };
+
   const getOpportunitiesByStatus = (status: OpportunityStatus | "trash") => {
     if (status === "trash") return [];
-    return opportunities
-      .filter(o => o.status === status)
-      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    const filtered = opportunities.filter(o => o.status === status);
+    return sortOpportunities(filtered);
   };
+
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortOption)?.label || "Sort";
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -248,6 +294,30 @@ export const KanbanBoard = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        {/* Sort Controls */}
+        <div className="flex items-center justify-end mb-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2 text-xs">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                {currentSortLabel}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {SORT_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => setSortOption(option.value)}
+                  className={`gap-2 text-xs ${sortOption === option.value ? 'bg-accent' : ''}`}
+                >
+                  {option.icon}
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Active Columns */}
           {ACTIVE_COLUMNS.map((column) => (
