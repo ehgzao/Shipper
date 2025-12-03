@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
+import SecurityTrendsChart from "@/components/SecurityTrendsChart";
 import { 
   exportToCSV, 
   formatAuditLogsForExport, 
@@ -602,6 +603,14 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
+              {/* Security Trends Charts */}
+              <SecurityTrendsChart
+                recentLogins={stats.recent_logins}
+                failedLoginsToday={stats.failed_logins_today}
+                successfulLoginsToday={stats.successful_logins_today}
+                lockedAccounts={stats.locked_accounts}
+              />
+
               {/* Live Security Events */}
               {liveEvents.length > 0 && (
                 <Card className="border-green-500/50 bg-green-500/5">
