@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +25,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isEmailVerified = !!user?.email_confirmed_at;
 
   useEffect(() => {
+    // Check for OAuth errors in URL
+    const checkOAuthErrors = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      
+      const error = urlParams.get('error') || hashParams.get('error');
+      const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
+      const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+      
+      if (error) {
+        let message = "Erro ao fazer login com Google";
+        
+        // Map error codes to friendly messages in Portuguese
+        if (errorCode === 'invalid_client' || errorDescription?.includes('invalid_client')) {
+          message = "Configuração do Google incorreta. Entre em contato com o suporte.";
+        } else if (errorCode === 'server_error' || errorCode === 'unexpected_failure') {
+          message = "Erro no servidor de autenticação. Tente novamente.";
+        } else if (errorDescription) {
+          message = `Erro: ${decodeURIComponent(errorDescription)}`;
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Falha na Autenticação",
+          description: message,
+        });
+        
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+    
+    checkOAuthErrors();
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
