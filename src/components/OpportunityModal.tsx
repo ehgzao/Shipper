@@ -92,7 +92,7 @@ const STATUS_OPTIONS: { value: OpportunityStatus; label: string }[] = [
 ];
 
 const TAG_OPTIONS = [
-  { value: "", label: "None" },
+  { value: "none", label: "None" },
   { value: "high_priority", label: "🔥 High Priority" },
   { value: "referral", label: "🤝 Referral" },
   { value: "dream_job", label: "💜 Dream Job" },
@@ -148,7 +148,7 @@ export const OpportunityModal = ({
       setNextActionDate(opportunity.next_action_date || "");
       setNotes(opportunity.notes || "");
       setFitLevel(opportunity.fit_level || 2);
-      setOpportunityTag(opportunity.opportunity_tag || "");
+      setOpportunityTag(opportunity.opportunity_tag || "none");
     } else {
       // Reset for new opportunity
       setCompanyName("");
@@ -165,7 +165,7 @@ export const OpportunityModal = ({
       setNextActionDate("");
       setNotes("");
       setFitLevel(2);
-      setOpportunityTag("");
+      setOpportunityTag("none");
     }
   }, [opportunity, open]);
 
@@ -213,7 +213,7 @@ export const OpportunityModal = ({
       notes: formData.notes || null,
       user_id: userId,
       fit_level: fitLevel,
-      opportunity_tag: opportunityTag || null,
+      opportunity_tag: opportunityTag === "none" ? null : opportunityTag || null,
     };
 
     let error;
