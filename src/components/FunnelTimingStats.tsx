@@ -19,10 +19,10 @@ interface StageTransition {
 const STAGE_ORDER = ["researching", "applied", "interviewing", "offer"];
 
 const STAGE_LABELS: Record<string, string> = {
-  researching: "Pesquisando",
-  applied: "Candidatado",
-  interviewing: "Entrevistando",
-  offer: "Oferta",
+  researching: "Researching",
+  applied: "Applied",
+  interviewing: "Interviewing",
+  offer: "Offer",
 };
 
 export const FunnelTimingStats = ({ opportunities }: FunnelTimingStatsProps) => {
@@ -118,12 +118,12 @@ export const FunnelTimingStats = ({ opportunities }: FunnelTimingStatsProps) => 
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Clock className="h-5 w-5" />
-            Tempo entre Etapas
+            Time Between Stages
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-4">
-            Dados insuficientes. Mova oportunidades pelo funil para ver estatísticas de tempo.
+            Not enough data. Move opportunities through the funnel to see timing statistics.
           </p>
         </CardContent>
       </Card>
@@ -135,7 +135,7 @@ export const FunnelTimingStats = ({ opportunities }: FunnelTimingStatsProps) => 
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Clock className="h-5 w-5" />
-          Tempo Médio entre Etapas
+          Average Time Between Stages
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -150,7 +150,7 @@ export const FunnelTimingStats = ({ opportunities }: FunnelTimingStatsProps) => 
               {transition.avgDays !== null ? (
                 <>
                   <span className="font-semibold text-primary">
-                    {transition.avgDays} {transition.avgDays === 1 ? "dia" : "dias"}
+                    {transition.avgDays} {transition.avgDays === 1 ? "day" : "days"}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     ({transition.count} {transition.count === 1 ? "opp" : "opps"})
@@ -167,9 +167,9 @@ export const FunnelTimingStats = ({ opportunities }: FunnelTimingStatsProps) => 
           <>
             <div className="border-t pt-4 mt-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Tempo total até oferta</span>
+                <span className="text-sm font-medium">Total time to offer</span>
                 <span className="font-bold text-lg text-status-offer">
-                  {totalPipelineTime} {totalPipelineTime === 1 ? "dia" : "dias"}
+                  {totalPipelineTime} {totalPipelineTime === 1 ? "day" : "days"}
                 </span>
               </div>
             </div>

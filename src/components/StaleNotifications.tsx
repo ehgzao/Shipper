@@ -22,9 +22,9 @@ const STAGE_THRESHOLDS: Record<string, number> = {
 };
 
 const STAGE_NAMES: Record<string, string> = {
-  researching: "Pesquisando",
-  applied: "Candidatado",
-  interviewing: "Entrevistando",
+  researching: "Researching",
+  applied: "Applied",
+  interviewing: "Interviewing",
 };
 
 export const StaleNotifications = ({ opportunities, onOpportunityClick }: StaleNotificationsProps) => {
@@ -73,7 +73,7 @@ export const StaleNotifications = ({ opportunities, onOpportunityClick }: StaleN
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-warning" />
           <h3 className="font-medium text-sm">
-            Oportunidades paradas ({staleOpportunities.length})
+            Stale opportunities ({staleOpportunities.length})
           </h3>
         </div>
         <Button 
@@ -82,7 +82,7 @@ export const StaleNotifications = ({ opportunities, onOpportunityClick }: StaleN
           className="text-xs text-muted-foreground hover:text-foreground"
           onClick={handleDismissAll}
         >
-          Dispensar todas
+          Dismiss all
         </Button>
       </div>
       
@@ -101,7 +101,7 @@ export const StaleNotifications = ({ opportunities, onOpportunityClick }: StaleN
               </div>
               <div className="flex items-center gap-1 mt-1 text-xs text-warning">
                 <Clock className="h-3 w-3" />
-                <span>{daysStale} dias em "{stageName}"</span>
+                <span>{daysStale} days in "{stageName}"</span>
               </div>
             </div>
             <Button
@@ -116,7 +116,7 @@ export const StaleNotifications = ({ opportunities, onOpportunityClick }: StaleN
         ))}
         {staleOpportunities.length > 5 && (
           <p className="text-xs text-muted-foreground text-center py-2">
-            E mais {staleOpportunities.length - 5} oportunidade(s)...
+            And {staleOpportunities.length - 5} more opportunity(ies)...
           </p>
         )}
       </div>
