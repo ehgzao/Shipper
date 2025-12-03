@@ -58,13 +58,13 @@ const VerifyEmail = () => {
 
       setCountdown(60);
       toast({
-        title: "Email reenviado",
-        description: "Verifique sua caixa de entrada.",
+        title: "Email resent",
+        description: "Check your inbox.",
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao reenviar email",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error resending email",
         variant: "destructive",
       });
     } finally {
@@ -91,13 +91,13 @@ const VerifyEmail = () => {
           </div>
 
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            Verifique seu email
+            Verify your email
           </h1>
 
           <p className="text-muted-foreground mb-6">
-            Enviamos um link de verificação para{" "}
+            We sent a verification link to{" "}
             <span className="font-medium text-foreground">{user?.email}</span>.
-            Clique no link para ativar sua conta.
+            Click the link to activate your account.
           </p>
 
           <div className="space-y-4">
@@ -110,14 +110,14 @@ const VerifyEmail = () => {
               {isResending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Reenviando...
+                  Resending...
                 </>
               ) : countdown > 0 ? (
-                `Reenviar em ${countdown}s`
+                `Resend in ${countdown}s`
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Reenviar email de verificação
+                  Resend verification email
                 </>
               )}
             </Button>
@@ -128,19 +128,19 @@ const VerifyEmail = () => {
               className="w-full text-muted-foreground"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Sair e usar outro email
+              Sign out and use another email
             </Button>
           </div>
 
           <div className="mt-6 pt-6 border-t">
             <p className="text-sm text-muted-foreground">
-              Não recebeu o email? Verifique a pasta de spam ou{" "}
+              Didn't receive the email? Check your spam folder or{" "}
               <button
                 onClick={handleResendEmail}
                 disabled={isResending || countdown > 0}
                 className="text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                solicite um novo
+                request a new one
               </button>
             </p>
           </div>

@@ -32,7 +32,7 @@ const Login = () => {
     const validationError = getValidationError(loginSchema, { email, password });
     if (validationError) {
       toast({
-        title: "Erro de validação",
+        title: "Validation Error",
         description: validationError,
         variant: "destructive",
       });
@@ -68,9 +68,9 @@ const Login = () => {
       }
 
       toast({
-        title: "Erro ao entrar",
+        title: "Sign in error",
         description: error.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos" 
+          ? "Incorrect email or password" 
           : error.message,
         variant: "destructive",
       });
@@ -80,8 +80,8 @@ const Login = () => {
       await createAuditLog('login_success', { email });
       
       toast({
-        title: "Bem-vindo de volta!",
-        description: "Login realizado com sucesso.",
+        title: "Welcome back!",
+        description: "Successfully signed in.",
       });
       navigate("/dashboard");
     }
@@ -96,16 +96,16 @@ const Login = () => {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
             <ArrowLeft className="h-4 w-4" />
-            Voltar ao início
+            Back to home
           </Link>
           
           <div className="flex items-center gap-2 mb-2">
             <Ship className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">Shipper</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
           <p className="mt-2 text-muted-foreground">
-            Entre para continuar rastreando suas oportunidades
+            Sign in to continue tracking your opportunities
           </p>
         </div>
 
@@ -120,7 +120,7 @@ const Login = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder="your@email.com"
                   className="pl-10"
                   required
                 />
@@ -129,9 +129,9 @@ const Login = () => {
 
             <div>
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password">Password</Label>
                 <Link to="/forgot-password" className="text-sm text-primary hover:text-primary/80 transition-colors">
-                  Esqueceu a senha?
+                  Forgot password?
                 </Link>
               </div>
               <div className="mt-2 relative">
@@ -149,7 +149,7 @@ const Login = () => {
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked}>
-              {isLoading ? "Entrando..." : "Entrar"}
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
 
             {lockMessage && (
@@ -164,7 +164,7 @@ const Login = () => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">ou</span>
+                <span className="bg-background px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
@@ -193,14 +193,14 @@ const Login = () => {
                   fill="#EA4335"
                 />
               </svg>
-              Continuar com Google
+              Continue with Google
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Não tem uma conta?{" "}
+            Don't have an account?{" "}
             <Link to="/signup" className="font-medium text-primary hover:text-primary/80 transition-colors">
-              Cadastre-se grátis
+              Sign up free
             </Link>
           </p>
         </div>
@@ -212,7 +212,7 @@ const Login = () => {
           <Ship className="h-20 w-20 mx-auto mb-8 opacity-80" />
           <h2 className="text-3xl font-bold mb-4">Ship opportunities, not applications.</h2>
           <p className="text-primary-foreground/80">
-            Qualidade sobre quantidade. Rastreie sua busca de emprego com intenção.
+            Quality over quantity. Track your job search with intention.
           </p>
         </div>
       </div>

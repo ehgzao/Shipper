@@ -120,10 +120,10 @@ const Landing = () => {
               <div className="flex-1 space-y-8">
                 <div className="animate-fade-up">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
-                    <Crosshair className="h-6 w-6" />
+                    <BarChart3 className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold text-2xl mb-3">Match Scoring</h3>
-                  <p className="text-muted-foreground">Know your fit before you apply. Our matching system analyzes your profile against each role—skills, seniority, experience.</p>
+                  <h3 className="font-semibold text-2xl mb-3">Analytics</h3>
+                  <p className="text-muted-foreground">Track your progress with insights. See conversion rates, pipeline health, and application trends at a glance.</p>
                 </div>
                 <div className="animate-fade-up" style={{
                 animationDelay: '100ms'

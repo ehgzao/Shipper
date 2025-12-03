@@ -9,7 +9,7 @@ import { z } from "zod";
 import { getValidationError } from "@/lib/validations";
 
 const emailSchema = z.object({
-  email: z.string().email("Email inválido").max(255, "Email deve ter no máximo 255 caracteres"),
+  email: z.string().email("Invalid email").max(255, "Email must be at most 255 characters"),
 });
 
 const ForgotPassword = () => {
@@ -24,7 +24,7 @@ const ForgotPassword = () => {
     const validationError = getValidationError(emailSchema, { email });
     if (validationError) {
       toast({
-        title: "Erro de validação",
+        title: "Validation Error",
         description: validationError,
         variant: "destructive",
       });
@@ -44,13 +44,13 @@ const ForgotPassword = () => {
 
       setEmailSent(true);
       toast({
-        title: "Email enviado",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        title: "Email sent",
+        description: "Check your inbox to reset your password.",
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao enviar email",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error sending email",
         variant: "destructive",
       });
     } finally {
@@ -68,23 +68,23 @@ const ForgotPassword = () => {
               className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar para login
+              Back to login
             </Link>
 
             <div className="text-center">
               <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-              <h2 className="text-2xl font-bold text-foreground">Email enviado!</h2>
+              <h2 className="text-2xl font-bold text-foreground">Email sent!</h2>
               <p className="mt-4 text-muted-foreground">
-                Enviamos um link para <span className="font-medium text-foreground">{email}</span>. 
-                Clique no link para redefinir sua senha.
+                We sent a link to <span className="font-medium text-foreground">{email}</span>. 
+                Click the link to reset your password.
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Não recebeu? Verifique a pasta de spam ou{" "}
+                Didn't receive it? Check your spam folder or{" "}
                 <button
                   onClick={() => setEmailSent(false)}
                   className="text-primary hover:underline"
                 >
-                  tente novamente
+                  try again
                 </button>
               </p>
             </div>
@@ -103,7 +103,7 @@ const ForgotPassword = () => {
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para login
+            Back to login
           </Link>
 
           <div className="flex items-center gap-2 mb-6">
@@ -111,9 +111,9 @@ const ForgotPassword = () => {
             <span className="text-2xl font-bold text-foreground">Shipper</span>
           </div>
 
-          <h2 className="text-2xl font-bold text-foreground">Esqueceu sua senha?</h2>
+          <h2 className="text-2xl font-bold text-foreground">Forgot your password?</h2>
           <p className="mt-2 text-muted-foreground">
-            Informe seu email e enviaremos um link para redefinir sua senha.
+            Enter your email and we'll send you a link to reset your password.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -128,7 +128,7 @@ const ForgotPassword = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder="your@email.com"
                   className="pl-10"
                   required
                 />
@@ -136,14 +136,14 @@ const ForgotPassword = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Enviando..." : "Enviar link de redefinição"}
+              {isLoading ? "Sending..." : "Send reset link"}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Lembrou sua senha?{" "}
+            Remember your password?{" "}
             <Link to="/login" className="text-primary hover:underline">
-              Faça login
+              Sign in
             </Link>
           </p>
         </div>
@@ -153,10 +153,10 @@ const ForgotPassword = () => {
         <div className="max-w-md text-center p-8">
           <Mail className="mx-auto h-24 w-24 text-primary/20 mb-6" />
           <h3 className="text-xl font-semibold text-foreground mb-2">
-            Recupere o acesso
+            Recover access
           </h3>
           <p className="text-muted-foreground">
-            Enviaremos um email seguro para você redefinir sua senha.
+            We'll send you a secure email to reset your password.
           </p>
         </div>
       </div>
