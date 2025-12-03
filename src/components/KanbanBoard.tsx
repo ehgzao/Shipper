@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronRight, ChevronDown, Archive } from "lucide-react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -45,14 +45,23 @@ interface KanbanColumn {
   dragHint?: string;
 }
 
-const COLUMNS: KanbanColumn[] = [
-  { id: "researching", title: "Researching", color: "bg-muted-foreground", borderColor: "border-muted-foreground", dragHint: "Researching jobs? Drag cards here" },
-  { id: "applied", title: "Applied", color: "bg-status-applied", borderColor: "border-status-applied", dragHint: "Applied to a job? Drag card here" },
-  { id: "interviewing", title: "Interviewing", color: "bg-status-interviewing", borderColor: "border-status-interviewing", dragHint: "Scheduled an interview? Drag card here" },
+const ACTIVE_COLUMNS: KanbanColumn[] = [
+  { id: "researching", title: "Researching", color: "bg-gray-400", borderColor: "border-gray-400", dragHint: "Researching jobs? Drag cards here" },
+  { id: "applied", title: "Applied", color: "bg-blue-500", borderColor: "border-blue-500", dragHint: "Applied to a job? Drag card here" },
+  { id: "interviewing", title: "Interviewing", color: "bg-purple-500", borderColor: "border-purple-500", dragHint: "Scheduled an interview? Drag card here" },
   { id: "assessment", title: "Assessment", color: "bg-amber-500", borderColor: "border-amber-500", dragHint: "Have a test or case study? Drag card here" },
-  { id: "offer", title: "Offer", color: "bg-status-offer", borderColor: "border-status-offer", dragHint: "Received an offer? Congrats! Drag card here 🎉" },
-  { id: "trash", title: "Trash", color: "bg-destructive", borderColor: "border-destructive", isTrash: true },
+  { id: "offer", title: "Offer", color: "bg-green-500", borderColor: "border-green-500", dragHint: "Received an offer? Congrats! 🎉" },
 ];
+
+const ARCHIVED_STATUSES: OpportunityStatus[] = ["rejected", "ghosted", "withdrawn"];
+
+const TRASH_COLUMN: KanbanColumn = {
+  id: "trash",
+  title: "Trash",
+  color: "bg-destructive",
+  borderColor: "border-destructive",
+  isTrash: true,
+};
 
 interface KanbanBoardProps {
   opportunities: Opportunity[];
@@ -73,14 +82,11 @@ export const KanbanBoard = ({
 }: KanbanBoardProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingTrashOpportunity, setPendingTrashOpportunity] = useState<Opportunity | null>(null);
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   );
 
@@ -90,6 +96,10 @@ export const KanbanBoard = ({
       .filter(o => o.status === status)
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   };
+
+  const archivedOpportunities = opportunities
+    .filter(o => ARCHIVED_STATUSES.includes(o.status as OpportunityStatus))
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -103,8 +113,6 @@ export const KanbanBoard = ({
 
     const opportunityId = active.id as string;
     const overId = over.id as string;
-
-    // Find the opportunity being dragged
     const opportunity = opportunities.find(o => o.id === opportunityId);
     if (!opportunity) return;
 
@@ -116,32 +124,37 @@ export const KanbanBoard = ({
 
     // Check if dropped on a column directly
     let targetColumnId: string | null = null;
-    const targetColumn = COLUMNS.find(col => col.id === overId);
+    const isActiveColumn = ACTIVE_COLUMNS.find(col => col.id === overId);
+    const isArchivedDrop = overId === "archived";
     
-    if (targetColumn && !targetColumn.isTrash) {
-      targetColumnId = targetColumn.id;
+    if (isActiveColumn) {
+      targetColumnId = isActiveColumn.id;
+    } else if (isArchivedDrop) {
+      // Dropped on archived column - set to rejected by default
+      targetColumnId = "rejected";
     } else {
-      // Check if dropped on another opportunity card - find which column it belongs to
+      // Check if dropped on another opportunity card
       const targetOpportunity = opportunities.find(o => o.id === overId);
       if (targetOpportunity) {
         targetColumnId = targetOpportunity.status;
         
         // Handle reordering within the same column
         if (opportunity.status === targetColumnId) {
-          const columnOpportunities = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+          const isArchivedStatus = ARCHIVED_STATUSES.includes(targetColumnId as OpportunityStatus);
+          const columnOpportunities = isArchivedStatus 
+            ? archivedOpportunities 
+            : getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+          
           const oldIndex = columnOpportunities.findIndex(o => o.id === opportunityId);
           const newIndex = columnOpportunities.findIndex(o => o.id === overId);
           
           if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
             const reordered = arrayMove(columnOpportunities, oldIndex, newIndex);
-            
-            // Update display_order for all affected items
             const updates = reordered.map((opp, index) => ({
               id: opp.id,
               display_order: index,
             }));
             
-            // Batch update
             for (const update of updates) {
               await supabase
                 .from("opportunities")
@@ -157,13 +170,15 @@ export const KanbanBoard = ({
     }
 
     if (targetColumnId && opportunity.status !== targetColumnId) {
-      // Get the max display_order in the target column
-      const targetColumnOpps = getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+      const isArchivedTarget = ARCHIVED_STATUSES.includes(targetColumnId as OpportunityStatus);
+      const targetColumnOpps = isArchivedTarget 
+        ? archivedOpportunities 
+        : getOpportunitiesByStatus(targetColumnId as OpportunityStatus);
+      
       const maxOrder = targetColumnOpps.length > 0 
         ? Math.max(...targetColumnOpps.map(o => o.display_order || 0)) + 1 
         : 0;
 
-      // Update status in database
       const { error } = await supabase
         .from("opportunities")
         .update({ 
@@ -181,9 +196,8 @@ export const KanbanBoard = ({
           variant: "destructive",
         });
       } else {
-        const targetColumnTitle = COLUMNS.find(c => c.id === targetColumnId)?.title;
+        const targetColumnTitle = ACTIVE_COLUMNS.find(c => c.id === targetColumnId)?.title || targetColumnId;
         
-        // Trigger confetti when moved to offer
         if (targetColumnId === "offer") {
           confetti({
             particleCount: 100,
@@ -191,18 +205,8 @@ export const KanbanBoard = ({
             origin: { y: 0.6 },
             colors: ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d']
           });
-          confetti({
-            particleCount: 50,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 }
-          });
-          confetti({
-            particleCount: 50,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 }
-          });
+          confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } });
+          confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } });
         }
         
         toast({
@@ -240,9 +244,7 @@ export const KanbanBoard = ({
     setPendingTrashOpportunity(null);
   };
 
-  const activeOpportunity = activeId 
-    ? opportunities.find(o => o.id === activeId) 
-    : null;
+  const activeOpportunity = activeId ? opportunities.find(o => o.id === activeId) : null;
 
   return (
     <>
@@ -253,31 +255,40 @@ export const KanbanBoard = ({
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-          {COLUMNS.map((column) => {
-            const columnOpportunities = getOpportunitiesByStatus(column.id);
-            
-            return (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                opportunities={columnOpportunities}
-                onOpportunityClick={onOpportunityClick}
-                isDragging={!!activeId}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
-                selectionMode={selectionMode}
-              />
-            );
-          })}
+          {/* Active Columns */}
+          {ACTIVE_COLUMNS.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              column={column}
+              opportunities={getOpportunitiesByStatus(column.id)}
+              onOpportunityClick={onOpportunityClick}
+              isDragging={!!activeId}
+              selectedIds={selectedIds}
+              onSelect={onSelect}
+              selectionMode={selectionMode}
+            />
+          ))}
+          
+          {/* Trash Column */}
+          <TrashColumn isDragging={!!activeId} />
         </div>
+
+        {/* Archived Section */}
+        <ArchivedSection
+          opportunities={archivedOpportunities}
+          expanded={archivedExpanded}
+          onToggle={() => setArchivedExpanded(!archivedExpanded)}
+          onOpportunityClick={onOpportunityClick}
+          isDragging={!!activeId}
+          selectedIds={selectedIds}
+          onSelect={onSelect}
+          selectionMode={selectionMode}
+        />
 
         <DragOverlay>
           {activeOpportunity ? (
             <div className="opacity-90 rotate-2 scale-105 shadow-2xl">
-              <OpportunityCard 
-                opportunity={activeOpportunity} 
-                onClick={() => {}} 
-              />
+              <OpportunityCard opportunity={activeOpportunity} onClick={() => {}} />
             </div>
           ) : null}
         </DragOverlay>
@@ -308,6 +319,121 @@ export const KanbanBoard = ({
   );
 };
 
+// Trash Column Component
+const TrashColumn = ({ isDragging }: { isDragging: boolean }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: "trash" });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-200 ${
+        isOver 
+          ? "border-destructive bg-destructive/10 scale-[1.02] shadow-lg" 
+          : isDragging 
+            ? "border-destructive/60" 
+            : "border-border"
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Trash2 className={`h-5 w-5 transition-colors ${isOver ? "text-destructive" : "text-muted-foreground"}`} />
+        <h3 className={`font-medium transition-colors ${isOver ? "text-destructive" : ""}`}>Trash</h3>
+      </div>
+      <div className={`flex flex-col items-center justify-center py-8 text-sm transition-colors ${isOver ? "text-destructive" : "text-muted-foreground"}`}>
+        <Trash2 className={`h-12 w-12 mb-2 transition-colors ${isOver ? "text-destructive" : "text-muted-foreground/30"}`} />
+        <p className="font-medium">{isOver ? "Drop to delete!" : "Drag to delete"}</p>
+        {isOver && <p className="text-xs mt-1">⚠️ You'll need to confirm</p>}
+      </div>
+    </div>
+  );
+};
+
+// Archived Section Component
+interface ArchivedSectionProps {
+  opportunities: Opportunity[];
+  expanded: boolean;
+  onToggle: () => void;
+  onOpportunityClick: (opportunity: Opportunity) => void;
+  isDragging: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, selected: boolean) => void;
+  selectionMode?: boolean;
+}
+
+const ArchivedSection = ({ 
+  opportunities, 
+  expanded, 
+  onToggle, 
+  onOpportunityClick, 
+  isDragging,
+  selectedIds = new Set(),
+  onSelect,
+  selectionMode = false
+}: ArchivedSectionProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id: "archived" });
+
+  if (opportunities.length === 0 && !isDragging) return null;
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`mt-4 bg-background rounded-xl border-2 transition-all duration-200 ${
+        isOver ? "border-gray-400 bg-gray-50 dark:bg-gray-900/50" : "border-border"
+      }`}
+    >
+      {/* Header - always visible */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 rounded-t-xl transition-colors"
+      >
+        {expanded ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )}
+        <Archive className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium text-sm">Archived</span>
+        <span className="text-muted-foreground text-xs ml-1">({opportunities.length})</span>
+        {isDragging && !expanded && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            Drop here to archive
+          </span>
+        )}
+      </button>
+
+      {/* Content - collapsed/expanded */}
+      {expanded && (
+        <div className="p-3 pt-0">
+          <SortableContext
+            items={opportunities.map(o => o.id)}
+            strategy={verticalListSortingStrategy}
+            id="archived"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              {opportunities.map((opportunity, index) => (
+                <div 
+                  key={opportunity.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <OpportunityCard
+                    opportunity={opportunity}
+                    onClick={() => onOpportunityClick(opportunity)}
+                    showArchivedBadge={true}
+                    isSelected={selectedIds.has(opportunity.id)}
+                    onSelect={onSelect}
+                    selectionMode={selectionMode}
+                  />
+                </div>
+              ))}
+            </div>
+          </SortableContext>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Kanban Column Component
 interface KanbanColumnProps {
   column: KanbanColumn;
   opportunities: Opportunity[];
@@ -327,49 +453,7 @@ const KanbanColumn = ({
   onSelect,
   selectionMode = false
 }: KanbanColumnProps) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.id,
-  });
-
-  // Trash column styling
-  if (column.isTrash) {
-    return (
-      <div 
-        ref={setNodeRef}
-        className={`bg-background rounded-xl border-2 border-dashed p-4 min-h-[300px] transition-all duration-200 ${
-          isOver 
-            ? "border-destructive bg-destructive/10 scale-[1.02] shadow-lg" 
-            : isDragging 
-              ? "border-destructive/60" 
-              : "border-border"
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Trash2 className={`h-5 w-5 transition-colors duration-200 ${
-            isOver ? "text-destructive" : "text-muted-foreground"
-          }`} />
-          <h3 className={`font-medium transition-colors duration-200 ${isOver ? "text-destructive" : ""}`}>
-            {column.title}
-          </h3>
-        </div>
-        <div className={`flex flex-col items-center justify-center py-8 text-sm transition-colors duration-200 ${
-          isOver ? "text-destructive" : "text-muted-foreground"
-        }`}>
-          <Trash2 className={`h-12 w-12 mb-2 transition-colors duration-200 ${
-            isOver ? "text-destructive" : "text-muted-foreground/30"
-          }`} />
-          <p className="font-medium">
-            {isOver ? "Drop to delete!" : "Drag to delete"}
-          </p>
-          {isOver && (
-            <p className="text-xs mt-1">
-              ⚠️ You'll need to confirm
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
     <div 
@@ -397,7 +481,7 @@ const KanbanColumn = ({
       >
         <div className="space-y-2 min-h-[200px]">
           {opportunities.length === 0 ? (
-            <div className={`text-center py-6 text-muted-foreground text-xs border-2 border-dashed rounded-lg transition-all duration-200 ${
+            <div className={`text-center py-6 text-muted-foreground text-xs border-2 border-dashed rounded-lg transition-all ${
               isOver ? `${column.borderColor}` : "border-border"
             }`}>
               <p className="font-medium">{isOver ? "Drop here!" : "No opportunities"}</p>

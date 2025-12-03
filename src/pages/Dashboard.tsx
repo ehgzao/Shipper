@@ -815,7 +815,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
               <span className="text-muted-foreground text-sm">({comps.length})</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {comps.map(company => {
+                {comps.map(company => {
                 const oppCount = getOpportunityCountByCompany(company.company_name);
                 return (
                   <div
@@ -835,7 +835,7 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
@@ -844,8 +844,27 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                         <Plus className="h-3 w-3 mr-1" />
                         Add Opportunity
                       </Button>
+                      {company.careers_url && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground"
+                          onClick={() => window.open(company.careers_url!, '_blank')}
+                        >
+                          <Compass className="h-3 w-3 mr-1" />
+                          Careers
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setCompanyToDelete(company)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                       {oppCount > 0 && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground ml-auto">
                           {oppCount} opp{oppCount !== 1 ? 's' : ''}
                         </span>
                       )}
