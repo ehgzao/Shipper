@@ -9,39 +9,48 @@ interface TargetCompany {
   last_checked_at: string | null;
 }
 
-interface Opportunity {
-  company_name: string;
-  is_deleted?: boolean | null;
-}
-
 interface TargetCompanyNotificationProps {
   companies: TargetCompany[];
-  opportunities: Opportunity[];
   verificationDays: number;
   onCheckCareers: (companyId: string, careersUrl: string) => void;
   onDismiss: () => void;
 }
 
+const getCheckStatusColor = (lastCheckedAt: string | null) => {
+  if (!lastCheckedAt) {
+    return "text-red-600 dark:text-red-400"; // Never checked = red
+  }
+  
+  const daysSince = differenceInDays(new Date(), new Date(lastCheckedAt));
+  
+  if (daysSince < 7) {
+    return "text-green-600 dark:text-green-400"; // Less than 7 days = green
+  } else if (daysSince <= 15) {
+    return "text-amber-600 dark:text-amber-400"; // 7-15 days = yellow/amber
+  } else {
+    return "text-red-600 dark:text-red-400"; // More than 15 days = red
+  }
+};
+
+const getCheckStatusText = (lastCheckedAt: string | null) => {
+  if (!lastCheckedAt) return "Never checked";
+  
+  const daysSince = differenceInDays(new Date(), new Date(lastCheckedAt));
+  
+  if (daysSince === 0) return "Checked today";
+  if (daysSince === 1) return "Checked yesterday";
+  return `${daysSince} days ago`;
+};
+
 export const TargetCompanyNotification = ({
   companies,
-  opportunities,
   verificationDays,
   onCheckCareers,
   onDismiss,
 }: TargetCompanyNotificationProps) => {
   const now = new Date();
   
-  // Get company names that have active opportunities in the pipeline
-  const companiesWithActiveOpportunities = new Set(
-    opportunities
-      .filter(o => !o.is_deleted)
-      .map(o => o.company_name.toLowerCase())
-  );
-  
   const uncheckedCompanies = companies.filter((company) => {
-    // Only include companies that have active opportunities
-    if (!companiesWithActiveOpportunities.has(company.company_name.toLowerCase())) return false;
-    
     if (!company.careers_url) return false;
     if (!company.last_checked_at) return true;
     
@@ -58,7 +67,7 @@ export const TargetCompanyNotification = ({
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           <h3 className="font-medium text-sm text-amber-800 dark:text-amber-200">
-            {uncheckedCompanies.length} companies not checked in {verificationDays}+ days
+            {uncheckedCompanies.length} companies not checked in {verificationDays}+ days. Check in Target Companies
           </h3>
         </div>
         <Button
@@ -73,9 +82,8 @@ export const TargetCompanyNotification = ({
 
       <div className="space-y-2 max-h-[150px] overflow-y-auto">
         {uncheckedCompanies.slice(0, 5).map((company) => {
-          const daysSince = company.last_checked_at
-            ? differenceInDays(now, new Date(company.last_checked_at))
-            : null;
+          const statusColor = getCheckStatusColor(company.last_checked_at);
+          const statusText = getCheckStatusText(company.last_checked_at);
 
           return (
             <div
@@ -86,8 +94,8 @@ export const TargetCompanyNotification = ({
                 <span className="font-medium text-sm truncate block">
                   {company.company_name}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {daysSince !== null ? `${daysSince} days ago` : "Never checked"}
+                <span className={`text-xs ${statusColor}`}>
+                  {statusText}
                 </span>
               </div>
               {company.careers_url && (
