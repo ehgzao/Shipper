@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/useTheme";
 import type { Database } from "@/integrations/supabase/types";
 import { profileSettingsSchema, passwordChangeSchema, getValidationError } from "@/lib/validations";
-import { createAuditLog } from "@/lib/auditLog";
+import { createAuditLog, sendUserSecurityAlert } from "@/lib/auditLog";
 import { sendSecurityNotification } from "@/lib/securityNotifications";
 
 // Flag images
@@ -279,12 +279,17 @@ const Settings = () => {
       // Log the password change
       await createAuditLog('password_changed', {});
       
-      // Send email notification
+      // Send email notification to user about password change
       if (user?.email) {
         sendSecurityNotification({
           event_type: 'password_changed',
           user_email: user.email,
           user_name: fullName || undefined,
+        });
+        
+        // Also send user security alert
+        sendUserSecurityAlert('password_changed', user.email, fullName || undefined, {
+          timestamp: new Date().toISOString(),
         });
       }
       
