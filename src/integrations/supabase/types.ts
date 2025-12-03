@@ -21,9 +21,11 @@ export type Database = {
           contact_linkedin: string | null
           contact_name: string | null
           created_at: string | null
+          deleted_at: string | null
           display_order: number | null
           fit_level: number | null
           id: string
+          is_deleted: boolean | null
           is_favorite: boolean | null
           job_url: string | null
           location: string | null
@@ -52,9 +54,11 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           display_order?: number | null
           fit_level?: number | null
           id?: string
+          is_deleted?: boolean | null
           is_favorite?: boolean | null
           job_url?: string | null
           location?: string | null
@@ -85,9 +89,11 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           display_order?: number | null
           fit_level?: number | null
           id?: string
+          is_deleted?: boolean | null
           is_favorite?: boolean | null
           job_url?: string | null
           location?: string | null

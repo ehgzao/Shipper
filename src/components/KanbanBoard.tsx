@@ -235,9 +235,13 @@ export const KanbanBoard = ({
   const handleConfirmDelete = async () => {
     if (!pendingTrashOpportunity) return;
 
+    // Soft delete - move to trash
     const { error } = await supabase
       .from("opportunities")
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString()
+      })
       .eq("id", pendingTrashOpportunity.id);
 
     if (error) {
@@ -248,8 +252,8 @@ export const KanbanBoard = ({
       });
     } else {
       toast({
-        title: "Opportunity deleted",
-        description: `${pendingTrashOpportunity.company_name} was removed.`,
+        title: "Moved to trash",
+        description: `${pendingTrashOpportunity.company_name} was moved to trash.`,
       });
       onUpdate();
     }

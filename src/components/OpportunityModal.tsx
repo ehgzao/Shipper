@@ -44,6 +44,8 @@ export interface Opportunity {
   opportunity_tag?: string | null;
   previous_status?: string | null;
   is_favorite?: boolean | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
 }
 
 export interface OpportunityProfile {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -18,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical, Archive } from "lucide-react";
+import { Ship, Settings, Plus, Kanban, Building2, AlertCircle, X, LogOut, Compass, TrendingUp, MoreVertical, CheckSquare, Trash2, Download, Filter, GripVertical } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,7 +61,7 @@ import { PipelineFilters } from "@/components/PipelineFilters";
 import { PresetCompaniesView } from "@/components/PresetCompaniesView";
 import { SearchInput } from "@/components/SearchInput";
 import { StatusCounters } from "@/components/StatusCounters";
-import { ArchivedViewDialog } from "@/components/ArchivedViewDialog";
+import { TrashBinDialog } from "@/components/TrashBinDialog";
 
 interface Profile {
   id: string;
@@ -103,7 +104,8 @@ const Dashboard = () => {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showCompanyNotification, setShowCompanyNotification] = useState(true);
-  const [showArchivedView, setShowArchivedView] = useState(false);
+  const [showTrashBin, setShowTrashBin] = useState(false);
+  const [deletedOpportunities, setDeletedOpportunities] = useState<Opportunity[]>([]);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -204,10 +206,23 @@ const Dashboard = () => {
       .from("opportunities")
       .select("*")
       .eq("user_id", user.id)
+      .or("is_deleted.is.null,is_deleted.eq.false")
       .order("created_at", { ascending: false });
 
     if (opportunitiesData) {
       setOpportunities(opportunitiesData as Opportunity[]);
+    }
+
+    // Fetch deleted opportunities
+    const { data: deletedData } = await supabase
+      .from("opportunities")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_deleted", true)
+      .order("deleted_at", { ascending: false });
+
+    if (deletedData) {
+      setDeletedOpportunities(deletedData as Opportunity[]);
     }
     
     setIsLoading(false);
@@ -252,6 +267,55 @@ const Dashboard = () => {
   };
 
   const handleDeleteOpportunity = async (id: string) => {
+    // Soft delete - move to trash
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString()
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Error deleting",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Moved to trash",
+        description: "The opportunity was moved to trash.",
+      });
+      fetchData();
+    }
+  };
+
+  const handleRestoreOpportunity = async (id: string) => {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        is_deleted: false,
+        deleted_at: null
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Error restoring",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Opportunity restored",
+        description: "The opportunity was restored to your pipeline.",
+      });
+      fetchData();
+    }
+  };
+
+  const handlePermanentDelete = async (id: string) => {
     const { error } = await supabase
       .from("opportunities")
       .delete()
@@ -265,9 +329,34 @@ const Dashboard = () => {
       });
     } else {
       toast({
-        title: "Opportunity deleted",
-        description: "The opportunity was removed.",
+        title: "Permanently deleted",
+        description: "The opportunity was permanently deleted.",
       });
+      fetchData();
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from("opportunities")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("is_deleted", true);
+
+    if (error) {
+      toast({
+        title: "Error emptying trash",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Trash emptied",
+        description: `${deletedOpportunities.length} opportunities permanently deleted.`,
+      });
+      setShowTrashBin(false);
       fetchData();
     }
   };
@@ -649,9 +738,14 @@ const Dashboard = () => {
                       Export Data
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setShowArchivedView(true)}>
-                      <Archive className="h-4 w-4 mr-2" />
-                      View Archived
+                    <DropdownMenuItem onClick={() => setShowTrashBin(true)}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      View Trash Bin
+                      {deletedOpportunities.length > 0 && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
+                          {deletedOpportunities.length}
+                        </Badge>
+                      )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -789,30 +883,14 @@ const Dashboard = () => {
         onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
       />
 
-      {/* Archived View Dialog */}
-      <ArchivedViewDialog
-        open={showArchivedView}
-        onOpenChange={setShowArchivedView}
-        opportunities={opportunities.filter(o => ["rejected", "ghosted", "withdrawn"].includes(o.status || ""))}
-        onOpportunityClick={handleOpportunityClick}
-        onRestore={async (opportunityId) => {
-          const opp = opportunities.find(o => o.id === opportunityId);
-          const restoreStatus = (opp?.previous_status as SupabaseDB["public"]["Enums"]["opportunity_status"]) || "researching";
-          await supabase
-            .from("opportunities")
-            .update({ 
-              status: restoreStatus,
-              updated_at: new Date().toISOString(),
-              previous_status: null
-            })
-            .eq("id", opportunityId);
-          toast({
-            title: "Opportunity restored",
-            description: `Moved back to ${restoreStatus}`,
-          });
-          fetchData();
-        }}
-        onDelete={handleDeleteOpportunity}
+      {/* Trash Bin Dialog */}
+      <TrashBinDialog
+        open={showTrashBin}
+        onOpenChange={setShowTrashBin}
+        deletedOpportunities={deletedOpportunities}
+        onRestore={handleRestoreOpportunity}
+        onPermanentDelete={handlePermanentDelete}
+        onEmptyTrash={handleEmptyTrash}
       />
     </div>
   );
