@@ -2,3 +2,6 @@ project_id = "nbawvjxnzaeermsfddxx"
 
 [functions.cleanup-trash]
 verify_jwt = false
+
+[functions.send-security-notification]
+verify_jwt = true

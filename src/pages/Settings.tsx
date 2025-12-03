@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/useTheme";
 import type { Database } from "@/integrations/supabase/types";
 import { profileSettingsSchema, passwordChangeSchema, getValidationError } from "@/lib/validations";
 import { createAuditLog } from "@/lib/auditLog";
+import { sendSecurityNotification } from "@/lib/securityNotifications";
 
 // Flag images
 import flagBR from "@/assets/flags/br.png";
@@ -224,6 +225,16 @@ const Settings = () => {
         updated_fields: ['full_name', 'experience', 'background', 'strength', 'countries', 'company_stages', 'target_roles']
       });
       
+      // Send email notification
+      if (user?.email) {
+        sendSecurityNotification({
+          event_type: 'profile_updated',
+          user_email: user.email,
+          user_name: fullName || undefined,
+          details: { updated_fields: ['full_name', 'experience', 'background', 'strength', 'countries', 'company_stages', 'target_roles'] }
+        });
+      }
+      
       toast({
         title: "Profile updated!",
         description: "Your changes have been saved.",
@@ -263,6 +274,15 @@ const Settings = () => {
     } else {
       // Log the password change
       await createAuditLog('password_changed', {});
+      
+      // Send email notification
+      if (user?.email) {
+        sendSecurityNotification({
+          event_type: 'password_changed',
+          user_email: user.email,
+          user_name: fullName || undefined,
+        });
+      }
       
       toast({
         title: "Password changed!",
