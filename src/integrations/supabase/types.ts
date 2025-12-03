@@ -448,6 +448,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_user_data: { Args: { p_target_user_id: string }; Returns: Json }
       admin_get_users: {
         Args: never
         Returns: {

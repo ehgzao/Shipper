@@ -8,7 +8,8 @@ import {
   ShieldOff, 
   Loader2, 
   RefreshCw,
-  Search
+  Search,
+  Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import AdminUserImpersonation from "./AdminUserImpersonation";
 
 interface UserData {
   user_id: string;
@@ -42,6 +44,7 @@ const AdminUserManagement = () => {
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'add' | 'remove' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [viewingUser, setViewingUser] = useState<{ id: string; email: string } | null>(null);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -124,6 +127,17 @@ const AdminUserManagement = () => {
     );
   }
 
+  // Show impersonation view if a user is selected
+  if (viewingUser) {
+    return (
+      <AdminUserImpersonation
+        userId={viewingUser.id}
+        userEmail={viewingUser.email}
+        onClose={() => setViewingUser(null)}
+      />
+    );
+  }
+
   return (
     <>
       <Card>
@@ -135,7 +149,7 @@ const AdminUserManagement = () => {
                 User Management
               </CardTitle>
               <CardDescription>
-                Manage admin roles for users ({users.length} total)
+                Manage admin roles and view user data ({users.length} total)
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={fetchUsers}>
@@ -185,7 +199,17 @@ const AdminUserManagement = () => {
                     Joined {format(new Date(userData.created_at), 'MMM d, yyyy')}
                   </p>
                 </div>
-                <div className="shrink-0 ml-4">
+                <div className="shrink-0 ml-4 flex items-center gap-2">
+                  {/* View User Data Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewingUser({ id: userData.user_id, email: userData.email })}
+                    title="View user data"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  
                   {userData.user_id === currentUser?.id ? (
                     <span className="text-xs text-muted-foreground">Cannot modify</span>
                   ) : userData.is_admin ? (
