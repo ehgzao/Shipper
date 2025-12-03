@@ -31,6 +31,8 @@ import { format, formatDistanceToNow } from "date-fns";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
 import SecurityTrendsChart from "@/components/SecurityTrendsChart";
+import AdminRateLimitOverride from "@/components/AdminRateLimitOverride";
+import SecurityEventTimeline from "@/components/SecurityEventTimeline";
 import { 
   exportToCSV, 
   formatAuditLogsForExport, 
@@ -353,6 +355,7 @@ const Admin = () => {
               <TabsTrigger value="security">Security</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -442,67 +445,11 @@ const Admin = () => {
                 </Card>
               )}
 
-              {/* AI Coach Rate Limiting Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    AI Coach Usage (Last 7 Days)
-                  </CardTitle>
-                  <CardDescription>
-                    Rate limiting statistics per user
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {stats.rate_limit_details && stats.rate_limit_details.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-2 font-medium">User</th>
-                            <th className="text-left py-3 px-2 font-medium">Date</th>
-                            <th className="text-right py-3 px-2 font-medium">Requests</th>
-                            <th className="text-right py-3 px-2 font-medium">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stats.rate_limit_details.map((detail, index) => (
-                            <tr key={index} className="border-b last:border-0">
-                              <td className="py-3 px-2">
-                                <span className="text-muted-foreground">{detail.email}</span>
-                              </td>
-                              <td className="py-3 px-2">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                                  {format(new Date(detail.reset_date), 'MMM d, yyyy')}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 text-right font-mono">
-                                {detail.request_count} / 10
-                              </td>
-                              <td className="py-3 px-2 text-right">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  detail.request_count >= 10 
-                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                    : detail.request_count >= 7
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                }`}>
-                                  {detail.request_count >= 10 ? 'Limit Reached' : detail.request_count >= 7 ? 'High Usage' : 'Normal'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-8">
-                      No AI Coach usage in the last 7 days
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              {/* AI Coach Rate Limiting with Override */}
+              <AdminRateLimitOverride 
+                rateLimitDetails={stats.rate_limit_details} 
+                onRefresh={fetchStats}
+              />
             </TabsContent>
 
             <TabsContent value="activity" className="space-y-6">
@@ -763,6 +710,10 @@ const Admin = () => {
                 </Button>
               </div>
               <AuditLogViewer logs={stats.recent_audit_logs} />
+            </TabsContent>
+
+            <TabsContent value="timeline" className="space-y-6">
+              <SecurityEventTimeline isAdmin={true} />
             </TabsContent>
           </Tabs>
         ) : (

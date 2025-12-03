@@ -15,7 +15,11 @@ export type AuditAction =
   | 'admin_role_granted'
   | 'admin_role_revoked'
   | 'admin_account_unlocked'
-  | 'admin_viewed_user_data';
+  | 'admin_viewed_user_data'
+  | 'admin_rate_limit_reset'
+  | 'admin_rate_limit_set'
+  | 'backup_codes_generated'
+  | 'recovery_email_updated';
 
 export const createAuditLog = async (
   action: AuditAction,
