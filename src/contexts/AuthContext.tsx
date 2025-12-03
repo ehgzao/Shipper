@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  googleLoading: boolean;
   isEmailVerified: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const isEmailVerified = !!user?.email_confirmed_at;
 
@@ -104,14 +106,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-    return { error };
+  const signInWithGoogle = async (retryCount = 0): Promise<{ error: Error | null }> => {
+    const MAX_RETRIES = 2;
+    setGoogleLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      
+      if (error && retryCount < MAX_RETRIES) {
+        toast({
+          title: "Tentando novamente...",
+          description: `Tentativa ${retryCount + 2} de ${MAX_RETRIES + 1}`,
+        });
+        // Wait 1 second before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return signInWithGoogle(retryCount + 1);
+      }
+      
+      if (error) {
+        setGoogleLoading(false);
+      }
+      
+      return { error };
+    } catch (err) {
+      setGoogleLoading(false);
+      return { error: err as Error };
+    }
   };
 
   const signOut = async () => {
@@ -130,6 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, 
       session, 
       loading, 
+      googleLoading,
       isEmailVerified,
       signUp, 
       signIn, 
