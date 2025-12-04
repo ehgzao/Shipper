@@ -161,7 +161,7 @@ serve(async (req) => {
     const emailContent = getEmailContent(event_type, user_name || "", details);
 
     const emailResponse = await resend.emails.send({
-      from: "Shipper Security <onboarding@resend.dev>",
+      from: "Shipper Security <noreply@shipper.works>",
       to: [user_email],
       subject: emailContent.subject,
       html: emailContent.html,

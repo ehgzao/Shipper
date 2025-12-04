@@ -362,7 +362,7 @@ serve(async (req) => {
     console.log(`Sending security alert to user: ${user_email}`);
 
     const emailResponse = await resend.emails.send({
-      from: "Shipper Security <noreply@shipper.works>>",
+      from: "Shipper Security <noreply@shipper.works>",
       to: [user_email],
       subject: emailContent.subject,
       html: emailContent.html,

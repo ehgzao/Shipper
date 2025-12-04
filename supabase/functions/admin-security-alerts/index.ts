@@ -255,7 +255,7 @@ serve(async (req) => {
     console.log(`Sending admin alert to: ${adminEmails.join(", ")}`);
 
     const emailResponse = await resend.emails.send({
-      from: "Shipper Security <onboarding@resend.dev>",
+      from: "Shipper Security <noreply@shipper.works>",
       to: adminEmails,
       subject: emailContent.subject,
       html: emailContent.html,
