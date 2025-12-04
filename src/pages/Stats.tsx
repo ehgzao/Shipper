@@ -555,7 +555,10 @@ const Stats = () => {
                             {flagInfo ? (
                               <img 
                                 src={flagInfo.flag} 
-                                alt={item.name} 
+                                alt={item.name}
+                                width={24}
+                                height={16}
+                                loading="lazy"
                                 className="w-6 h-4 object-cover rounded-sm"
                               />
                             ) : (

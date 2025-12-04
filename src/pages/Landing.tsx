@@ -137,7 +137,12 @@ const Landing = () => {
               </div>
               <div className="flex-1 lg:flex-[1.2]">
                 <div className="rounded-xl overflow-hidden shadow-2xl border border-border/50">
-                  <img src={featureAnalyticsScreenshot} alt="Analytics and AI Coach features" className="w-full h-auto object-cover" />
+                  <img 
+                    src={featureAnalyticsScreenshot} 
+                    alt="Analytics and AI Coach features" 
+                    className="w-full h-auto object-cover" 
+                    loading="lazy" 
+                  />
                 </div>
               </div>
             </div>

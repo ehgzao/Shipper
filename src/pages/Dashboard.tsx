@@ -1343,7 +1343,14 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                   }`}
                 >
                   {FLAG_IMAGES[code] && (
-                    <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-4 h-3 object-cover rounded-sm" />
+                    <img 
+                      src={FLAG_IMAGES[code]} 
+                      alt={info?.name || country} 
+                      width={16}
+                      height={12}
+                      loading="lazy"
+                      className="w-4 h-3 object-cover rounded-sm" 
+                    />
                   )}
                   {info?.name || country}
                 </button>
@@ -1403,7 +1410,14 @@ const CompaniesView = ({ companies, opportunities, onCreateOpportunity, onDelete
                 <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                   <h3 className="font-semibold flex items-center gap-2">
                     {FLAG_IMAGES[code] && (
-                      <img src={FLAG_IMAGES[code]} alt={info?.name || country} className="w-5 h-3.5 object-cover rounded-sm" />
+                      <img 
+                        src={FLAG_IMAGES[code]} 
+                        alt={info?.name || country} 
+                        width={20}
+                        height={14}
+                        loading="lazy"
+                        className="w-5 h-3.5 object-cover rounded-sm" 
+                      />
                     )}
                     {info?.name || country}
                     <span className="text-muted-foreground font-normal">

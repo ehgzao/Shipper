@@ -79,10 +79,7 @@ const Login = () => {
       localStorage.removeItem(REMEMBER_CREDENTIALS_KEY);
     }
 
-    // Get device and location context
-    const { deviceInfo, geoLocation, readableDevice } = await getLoginContext();
-
-    // Check if account is locked
+    // Check if account is locked before doing heavier context work
     const locked = await checkAccountLockout(email);
     if (locked) {
       setIsLocked(true);
@@ -95,6 +92,9 @@ const Login = () => {
       return;
     }
     
+    // Get device and location context
+    const { deviceInfo, geoLocation, readableDevice } = await getLoginContext();
+
     setIsLoading(true);
     
     const { error } = await signIn(email, password);

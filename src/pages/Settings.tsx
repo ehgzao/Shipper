@@ -543,7 +543,10 @@ const Settings = () => {
                       />
                       <img 
                         src={FLAG_IMAGES[country.code]} 
-                        alt={country.name} 
+                        alt={country.name}
+                        width={20}
+                        height={14}
+                        loading="lazy"
                         className="w-5 h-3.5 object-cover rounded-sm"
                       />
                       <span className="font-medium text-sm">{country.name}</span>
