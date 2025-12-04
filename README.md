@@ -1,4 +1,5 @@
 # 🚢 Shipper
+🌐 **Live:** [shipper.works](https://shipper.works)
 
 **Shipping opportunities for Product People**
 
@@ -81,7 +82,7 @@ Full dark theme support for late-night job hunting sessions.
 | **Styling** | Tailwind CSS + shadcn/ui |
 | **Backend** | Supabase (Auth, Database, Edge Functions) |
 | **AI** | Groq API (Llama 3.3 70B) |
-| **Deployment** | Vercel |
+| **Deployment** | Netlify |
 
 ## 🚀 Getting Started
 
