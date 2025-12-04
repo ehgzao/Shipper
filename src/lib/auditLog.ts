@@ -19,7 +19,8 @@ export type AuditAction =
   | 'admin_rate_limit_reset'
   | 'admin_rate_limit_set'
   | 'backup_codes_generated'
-  | 'recovery_email_updated';
+  | 'recovery_email_updated'
+  | 'impossible_travel_detected';
 
 export const createAuditLog = async (
   action: AuditAction,
@@ -53,6 +54,18 @@ export const checkAccountLockout = async (email: string): Promise<boolean> => {
   }
 };
 
+interface ImpossibleTravelInfo {
+  suspicious: boolean;
+  reason: string;
+  details?: {
+    distance_km: number;
+    time_hours: number;
+    required_speed_kmh: number;
+    last_location: string;
+    last_login_at: string;
+  };
+}
+
 export interface LoginAttemptResult {
   locked: boolean;
   locked_until?: string;
@@ -65,7 +78,9 @@ export interface LoginAttemptResult {
     failed_attempts?: number;
     attempt_count?: number;
     ip_address?: string;
+    location?: string;
   };
+  impossible_travel?: ImpossibleTravelInfo;
 }
 
 // Send security alert to admins (requires authentication)
@@ -108,7 +123,7 @@ const sendSecurityAlert = async (
 
 // Send security alert to user (requires authentication)
 export const sendUserSecurityAlert = async (
-  alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed' | '2fa_enabled' | '2fa_disabled',
+  alertType: 'account_locked' | 'suspicious_login' | 'new_device_login' | 'password_changed' | '2fa_enabled' | '2fa_disabled' | 'impossible_travel',
   userEmail: string,
   userName?: string,
   details?: Record<string, unknown>
@@ -146,14 +161,31 @@ export const sendUserSecurityAlert = async (
   }
 };
 
-export const recordLoginAttempt = async (
+export interface GeoLocationInfo {
+  ip?: string;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  country?: string;
+}
+
+export const recordLoginAttemptWithGeo = async (
   email: string,
-  success: boolean
+  success: boolean,
+  geoLocation?: GeoLocationInfo,
+  deviceInfo?: { userAgent?: string; fingerprint?: string }
 ): Promise<LoginAttemptResult> => {
   try {
-    const { data, error } = await supabase.rpc('record_login_attempt', {
+    const { data, error } = await supabase.rpc('record_login_attempt_with_geo', {
       p_email: email,
-      p_success: success
+      p_success: success,
+      p_ip_address: geoLocation?.ip || null,
+      p_latitude: geoLocation?.latitude || null,
+      p_longitude: geoLocation?.longitude || null,
+      p_city: geoLocation?.city || null,
+      p_country: geoLocation?.country || null,
+      p_user_agent: deviceInfo?.userAgent || null,
+      p_device_fingerprint: deviceInfo?.fingerprint || null
     });
     
     if (error) throw error;
@@ -170,9 +202,31 @@ export const recordLoginAttempt = async (
       }
     }
     
+    // Send impossible travel alert if detected
+    if (result.impossible_travel?.suspicious) {
+      sendSecurityAlert('impossible_travel', email, {
+        ...result.impossible_travel.details,
+        email
+      });
+      sendUserSecurityAlert('impossible_travel', email, undefined, {
+        ...result.impossible_travel.details,
+        current_location: geoLocation?.city && geoLocation?.country 
+          ? `${geoLocation.city}, ${geoLocation.country}` 
+          : 'Unknown'
+      });
+    }
+    
     return result;
   } catch (error) {
     console.error('Failed to record login attempt:', error);
     return { locked: false, message: 'Failed to record attempt' };
   }
+};
+
+// Keep the old function for backward compatibility
+export const recordLoginAttempt = async (
+  email: string,
+  success: boolean
+): Promise<LoginAttemptResult> => {
+  return recordLoginAttemptWithGeo(email, success);
 };

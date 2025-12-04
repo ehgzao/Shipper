@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Ship, Mail, Lock, ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
+import { Ship, Mail, Lock, ArrowLeft, AlertTriangle, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema, getValidationError } from "@/lib/validations";
-import { checkAccountLockout, recordLoginAttempt, createAuditLog } from "@/lib/auditLog";
+import { checkAccountLockout, recordLoginAttemptWithGeo, createAuditLog, sendUserSecurityAlert } from "@/lib/auditLog";
 import { getLoginContext, isNewDevice, storeDeviceFingerprint } from "@/lib/deviceFingerprint";
 import { supabase } from "@/integrations/supabase/client";
+import { TurnstileCaptcha, useVerifyCaptcha } from "@/components/TurnstileCaptcha";
 
 const REMEMBER_EMAIL_KEY = 'shipper_remember_email';
 
@@ -21,9 +22,12 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockMessage, setLockMessage] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [impossibleTravelWarning, setImpossibleTravelWarning] = useState<string | null>(null);
   const { toast } = useToast();
   const { signIn, signInWithGoogle, googleLoading, user } = useAuth();
   const navigate = useNavigate();
+  const { verify: verifyCaptcha, isVerifying } = useVerifyCaptcha();
 
   // Load remembered email on mount
   useEffect(() => {
@@ -40,25 +44,6 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  // Send security alert to user
-  const sendUserSecurityAlert = async (
-    alertType: string,
-    userEmail: string,
-    details: Record<string, unknown>
-  ) => {
-    try {
-      await supabase.functions.invoke('send-user-security-alert', {
-        body: {
-          alert_type: alertType,
-          user_email: userEmail,
-          details,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to send user security alert:', error);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -70,6 +55,27 @@ const Login = () => {
         description: validationError,
         variant: "destructive",
       });
+      return;
+    }
+
+    // Verify CAPTCHA
+    if (!captchaToken) {
+      toast({
+        title: "CAPTCHA Required",
+        description: "Please complete the CAPTCHA verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const captchaValid = await verifyCaptcha(captchaToken);
+    if (!captchaValid) {
+      toast({
+        title: "CAPTCHA Failed",
+        description: "CAPTCHA verification failed. Please try again.",
+        variant: "destructive",
+      });
+      setCaptchaToken(null);
       return;
     }
 
@@ -101,21 +107,15 @@ const Login = () => {
     const { error } = await signIn(email, password);
     
     if (error) {
-      // Record failed attempt with device info
-      const result = await recordLoginAttempt(email, false);
+      // Record failed attempt with full geo data
+      const result = await recordLoginAttemptWithGeo(email, false, geoLocation, {
+        userAgent: deviceInfo.userAgent,
+        fingerprint: deviceInfo.fingerprint
+      });
       
       if (result.locked) {
         setIsLocked(true);
         setLockMessage("Account temporarily locked due to too many failed attempts.");
-        
-        // Send account locked notification to user
-        await sendUserSecurityAlert('account_locked', email, {
-          ip_address: geoLocation.ip,
-          location: geoLocation.city && geoLocation.country 
-            ? `${geoLocation.city}, ${geoLocation.country}` 
-            : undefined,
-          device: readableDevice,
-        });
       } else if (result.attempts_remaining !== undefined) {
         setLockMessage(`${result.attempts_remaining} attempts remaining before lockout.`);
       }
@@ -128,19 +128,42 @@ const Login = () => {
         variant: "destructive",
       });
     } else {
-      // Record successful attempt (clears lockout)
-      await recordLoginAttempt(email, true);
+      // Record successful attempt with full geo data
+      const result = await recordLoginAttemptWithGeo(email, true, geoLocation, {
+        userAgent: deviceInfo.userAgent,
+        fingerprint: deviceInfo.fingerprint
+      });
+      
       await createAuditLog('login_success', { 
         email,
         device: readableDevice,
         ip_address: geoLocation.ip,
         country: geoLocation.country,
         city: geoLocation.city,
+        latitude: geoLocation.latitude,
+        longitude: geoLocation.longitude,
       });
+      
+      // Check for impossible travel
+      if (result.impossible_travel?.suspicious) {
+        setImpossibleTravelWarning(
+          `Unusual login detected: Your account was accessed from ${result.impossible_travel.details?.last_location || 'another location'} ` +
+          `approximately ${result.impossible_travel.details?.time_hours?.toFixed(1) || '?'} hours ago, ` +
+          `which is ${result.impossible_travel.details?.distance_km?.toFixed(0) || '?'} km away.`
+        );
+        
+        await createAuditLog('impossible_travel_detected', {
+          email,
+          ...result.impossible_travel.details,
+          current_location: geoLocation.city && geoLocation.country 
+            ? `${geoLocation.city}, ${geoLocation.country}` 
+            : 'Unknown'
+        });
+      }
       
       // Check if this is a new device and send alert
       if (isNewDevice(deviceInfo.fingerprint)) {
-        await sendUserSecurityAlert('new_device_login', email, {
+        await sendUserSecurityAlert('new_device_login', email, undefined, {
           ip_address: geoLocation.ip,
           location: geoLocation.city && geoLocation.country 
             ? `${geoLocation.city}, ${geoLocation.country}` 
@@ -183,6 +206,21 @@ const Login = () => {
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          {impossibleTravelWarning && (
+            <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2">
+                <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-700 dark:text-amber-300">Unusual Location Detected</p>
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{impossibleTravelWarning}</p>
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                    If this wasn't you, please change your password immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -235,8 +273,14 @@ const Login = () => {
               </Label>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked}>
-              {isLoading ? "Signing in..." : "Sign in"}
+            <TurnstileCaptcha
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked || isVerifying || !captchaToken}>
+              {isLoading || isVerifying ? "Signing in..." : "Sign in"}
             </Button>
 
             {lockMessage && (
@@ -285,7 +329,7 @@ const Login = () => {
                   />
                 </svg>
               )}
-              {googleLoading ? "Conectando..." : "Continue with Google"}
+              {googleLoading ? "Connecting..." : "Continue with Google"}
             </Button>
           </form>
 

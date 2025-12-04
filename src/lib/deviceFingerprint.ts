@@ -13,6 +13,8 @@ export interface GeoLocation {
   ip?: string;
   country?: string;
   city?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 // Generate a simple device fingerprint based on browser characteristics
@@ -96,7 +98,8 @@ export const parseUserAgent = (userAgent: string): string => {
 export const fetchGeoLocation = async (): Promise<GeoLocation> => {
   try {
     // Using ip-api.com (free, no API key required for limited use)
-    const response = await fetch('https://ip-api.com/json/?fields=status,country,city,query');
+    // Include lat/lon for impossible travel detection
+    const response = await fetch('https://ip-api.com/json/?fields=status,country,city,query,lat,lon');
     
     if (!response.ok) {
       console.warn('Geolocation API request failed');
@@ -110,6 +113,8 @@ export const fetchGeoLocation = async (): Promise<GeoLocation> => {
         ip: data.query,
         country: data.country,
         city: data.city,
+        latitude: data.lat,
+        longitude: data.lon,
       };
     }
     
