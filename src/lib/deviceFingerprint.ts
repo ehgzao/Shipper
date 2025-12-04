@@ -94,35 +94,58 @@ export const parseUserAgent = (userAgent: string): string => {
   return `${browser} on ${os} (${deviceType})`;
 };
 
-// Fetch IP geolocation using a free API
+// Fetch IP geolocation using multiple fallback services
 export const fetchGeoLocation = async (): Promise<GeoLocation> => {
-  try {
-    // Using ip-api.com (free, no API key required for limited use)
-    // Include lat/lon for impossible travel detection
-    const response = await fetch('https://ip-api.com/json/?fields=status,country,city,query,lat,lon');
-    
-    if (!response.ok) {
-      console.warn('Geolocation API request failed');
-      return {};
+  // Try multiple services with fallback
+  const services = [
+    {
+      url: 'https://api.ipify.org?format=json',
+      parse: (data: unknown) => ({ ip: (data as { ip?: string }).ip })
+    },
+    {
+      url: 'https://ipapi.co/json/',
+      parse: (data: unknown) => ({
+        ip: (data as { ip?: string }).ip,
+        country: (data as { country_name?: string }).country_name,
+        city: (data as { city?: string }).city,
+        latitude: (data as { latitude?: number }).latitude,
+        longitude: (data as { longitude?: number }).longitude,
+      })
+    },
+    {
+      url: 'https://api.db-ip.com/v2/free/self',
+      parse: (data: unknown) => ({
+        ip: (data as { ipAddress?: string }).ipAddress,
+        country: (data as { countryName?: string }).countryName,
+        city: (data as { city?: string }).city,
+      })
     }
-    
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      return {
-        ip: data.query,
-        country: data.country,
-        city: data.city,
-        latitude: data.lat,
-        longitude: data.lon,
-      };
+  ];
+
+  for (const service of services) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const response = await fetch(service.url, { 
+        signal: controller.signal 
+      });
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const result = service.parse(data);
+        if (result.ip) {
+          return result;
+        }
+      }
+    } catch (e) {
+      // Try next service
+      continue;
     }
-    
-    return {};
-  } catch (error) {
-    console.warn('Failed to fetch geolocation:', error);
-    return {};
   }
+  
+  return { ip: 'unknown' };
 };
 
 // Get full device and location context for login attempts

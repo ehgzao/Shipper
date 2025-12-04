@@ -137,10 +137,11 @@ const SessionManagement = () => {
         title: "Session revoked",
         description: "The session has been successfully terminated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error revoking session",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -171,10 +172,11 @@ const SessionManagement = () => {
         title: "Sessions revoked",
         description: "All other sessions have been terminated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error revoking sessions",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     }

@@ -81,10 +81,11 @@ const AdminUserImpersonation = ({ userId, userEmail, onClose }: AdminUserImperso
 
       if (error) throw error;
       setUserData(data as unknown as UserData);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error loading user data",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {

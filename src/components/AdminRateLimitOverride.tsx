@@ -52,10 +52,11 @@ export const AdminRateLimitOverride = ({ rateLimitDetails, onRefresh }: AdminRat
         description: `Successfully reset rate limit for ${email}`,
       });
       onRefresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -82,10 +83,11 @@ export const AdminRateLimitOverride = ({ rateLimitDetails, onRefresh }: AdminRat
       setSelectedUser(null);
       setNewCount("");
       onRefresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {

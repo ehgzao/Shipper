@@ -59,10 +59,11 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
       setQrCode(data.totp.qr_code);
       setSecret(data.totp.secret);
       setFactorId(data.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error setting up 2FA",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
       setIsEnrolling(false);
@@ -109,10 +110,11 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
         title: "2FA Enabled",
         description: "Two-factor authentication has been successfully enabled.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Verification failed",
-        description: error.message || "Invalid code. Please try again.",
+        description: err.message || "Invalid code. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -145,10 +147,11 @@ const TwoFactorSetup = ({ onStatusChange }: TwoFactorSetupProps) => {
         title: "2FA Disabled",
         description: "Two-factor authentication has been disabled.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error disabling 2FA",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     }

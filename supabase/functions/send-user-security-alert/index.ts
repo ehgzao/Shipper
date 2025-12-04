@@ -372,7 +372,7 @@ serve(async (req) => {
       JSON.stringify({ success: true, data: emailResponse }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-user-security-alert:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),

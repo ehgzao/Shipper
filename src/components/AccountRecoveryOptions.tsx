@@ -98,10 +98,11 @@ export const AccountRecoveryOptions = () => {
         title: "Backup Codes Generated",
         description: "Please save these codes in a secure location.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -162,10 +163,11 @@ ${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}
         title: "Recovery Email Saved",
         description: "Your recovery email has been updated",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {

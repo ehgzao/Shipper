@@ -173,10 +173,11 @@ serve(async (req) => {
       JSON.stringify({ success: true, data: emailResponse }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-security-notification:", error);
+    const err = error as { message?: string };
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

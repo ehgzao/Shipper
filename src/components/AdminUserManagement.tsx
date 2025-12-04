@@ -68,10 +68,11 @@ const AdminUserManagement = () => {
       if (error) throw error;
       setUsers((data as UserData[]) || []);
       setFilteredUsers((data as UserData[]) || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error loading users",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -99,10 +100,11 @@ const AdminUserManagement = () => {
 
       // Refresh users list
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error managing role",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {

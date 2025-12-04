@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 interface TurnstileCaptchaProps {
   onVerify: (token: string) => void;
@@ -10,14 +12,7 @@ interface TurnstileCaptchaProps {
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: HTMLElement, options: {
-        sitekey: string;
-        callback: (token: string) => void;
-        'expired-callback'?: () => void;
-        'error-callback'?: (error: string) => void;
-        theme?: 'light' | 'dark' | 'auto';
-        size?: 'normal' | 'compact';
-      }) => string;
+      render: (container: HTMLElement, options: object) => string;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
     };
@@ -25,130 +20,111 @@ declare global {
   }
 }
 
-export const TurnstileCaptcha = ({ onVerify, onExpire, onError }: TurnstileCaptchaProps) => {
+export const TurnstileCaptcha = memo(function TurnstileCaptcha({ 
+  onVerify, 
+  onExpire, 
+  onError 
+}: TurnstileCaptchaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const [siteKey, setSiteKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const renderedRef = useRef(false);
 
-  // Fetch site key from edge function
   useEffect(() => {
-    const fetchSiteKey = async () => {
+    console.log('[Turnstile] Component mounted');
+    console.log('[Turnstile] Site Key:', SITE_KEY);
+    console.log('[Turnstile] window.turnstile:', !!window.turnstile);
+
+    const renderWidget = () => {
+      if (!SITE_KEY) {
+        console.error('[Turnstile] Missing VITE_TURNSTILE_SITE_KEY');
+        onError?.('CAPTCHA not configured');
+        return;
+      }
+
+      if (renderedRef.current) {
+        console.log('[Turnstile] Already rendered, skipping');
+        return;
+      }
+      if (!containerRef.current) {
+        console.log('[Turnstile] Container not ready');
+        return;
+      }
+      if (!window.turnstile) {
+        console.log('[Turnstile] Script not loaded yet, retrying in 500ms...');
+        setTimeout(renderWidget, 500);
+        return;
+      }
+
+      console.log('[Turnstile] Rendering widget...');
+      renderedRef.current = true;
+
       try {
-        const { data, error } = await supabase.functions.invoke('get-turnstile-key');
-        if (error) throw error;
-        setSiteKey(data.siteKey);
-      } catch (err) {
-        console.error('Failed to fetch Turnstile site key:', err);
-        onError?.('Failed to load CAPTCHA');
-      } finally {
-        setLoading(false);
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+          sitekey: SITE_KEY,
+          callback: (token: string) => {
+            console.log('[Turnstile] Success! Token received');
+            onVerify(token);
+          },
+          'error-callback': () => {
+            console.error('[Turnstile] Error callback triggered');
+            onError?.('Verification failed');
+          },
+          'expired-callback': () => {
+            console.log('[Turnstile] Token expired');
+            onExpire?.();
+          },
+          theme: 'auto',
+          size: 'normal',
+        });
+        console.log('[Turnstile] Widget rendered successfully');
+      } catch (e) {
+        console.error('[Turnstile] Render error:', e);
+        renderedRef.current = false;
       }
     };
-    fetchSiteKey();
-  }, [onError]);
 
-  // Load Turnstile script
-  useEffect(() => {
-    if (!siteKey) return;
-
-    // Check if script is already loaded
+    // Try to render immediately or wait for script
     if (window.turnstile) {
-      setScriptLoaded(true);
-      return;
+      renderWidget();
+    } else {
+      // Set callback for when script loads
+      window.onTurnstileLoad = () => {
+        console.log('[Turnstile] Script loaded via onTurnstileLoad callback');
+        renderWidget();
+      };
+      // Also try polling in case callback doesn't fire
+      setTimeout(renderWidget, 1000);
     }
-
-    // Check if script is already in DOM
-    const existingScript = document.querySelector('script[src*="turnstile"]');
-    if (existingScript) {
-      window.onTurnstileLoad = () => setScriptLoaded(true);
-      return;
-    }
-
-    // Load the script
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-    script.async = true;
-    script.defer = true;
-    
-    window.onTurnstileLoad = () => {
-      setScriptLoaded(true);
-    };
-    
-    document.head.appendChild(script);
 
     return () => {
-      // Cleanup
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
         } catch (e) {
-          // Ignore cleanup errors
+          // Widget might already be removed
         }
       }
+      renderedRef.current = false;
+      widgetIdRef.current = null;
     };
-  }, [siteKey]);
+  }, [onVerify, onExpire, onError]);
 
-  // Render widget when script is loaded
-  const renderWidget = useCallback(() => {
-    if (!containerRef.current || !window.turnstile || !siteKey) return;
-    
-    // Remove existing widget if any
-    if (widgetIdRef.current) {
-      try {
-        window.turnstile.remove(widgetIdRef.current);
-      } catch (e) {
-        // Ignore
-      }
-    }
-
-    // Clear container
-    containerRef.current.innerHTML = '';
-
-    // Render new widget
-    widgetIdRef.current = window.turnstile.render(containerRef.current, {
-      sitekey: siteKey,
-      callback: onVerify,
-      'expired-callback': onExpire,
-      'error-callback': onError,
-      theme: 'auto',
-      size: 'normal',
-    });
-  }, [siteKey, onVerify, onExpire, onError]);
-
-  useEffect(() => {
-    if (scriptLoaded && siteKey) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(renderWidget, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [scriptLoaded, siteKey, renderWidget]);
-
-  if (loading) {
-    return (
-      <div className="h-[65px] flex items-center justify-center bg-muted/50 rounded-md">
-        <span className="text-sm text-muted-foreground">Loading CAPTCHA...</span>
-      </div>
-    );
-  }
-
-  if (!siteKey) {
-    return (
-      <div className="h-[65px] flex items-center justify-center bg-destructive/10 rounded-md">
-        <span className="text-sm text-destructive">CAPTCHA unavailable</span>
-      </div>
-    );
-  }
-
-  return <div ref={containerRef} className="flex justify-center" />;
-};
+  return (
+    <div 
+      ref={containerRef} 
+      className="flex justify-center min-h-[65px]" 
+      id="turnstile-container"
+    />
+  );
+});
 
 // Hook to verify CAPTCHA token server-side
 export const useVerifyCaptcha = () => {
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const verify = async (token: string): Promise<boolean> => {
+  const verify = useCallback(async (token: string): Promise<boolean> => {
+    if (!token) return false;
+    
     setIsVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke('verify-captcha', {
@@ -167,7 +143,7 @@ export const useVerifyCaptcha = () => {
     } finally {
       setIsVerifying(false);
     }
-  };
+  }, []);
 
   return { verify, isVerifying };
 };

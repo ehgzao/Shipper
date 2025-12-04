@@ -45,10 +45,11 @@ const MFAVerification = ({ onVerified, onCancel }: MFAVerificationProps) => {
       if (verifyError) throw verifyError;
 
       onVerified();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Verification failed",
-        description: error.message || "Invalid code. Please try again.",
+        description: err.message || "Invalid code. Please try again.",
         variant: "destructive",
       });
       setCode("");

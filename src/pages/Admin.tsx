@@ -261,16 +261,87 @@ const Admin = () => {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_admin_stats');
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date().toISOString();
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-      if (error) throw error;
-      setStats(data as unknown as AdminStats);
-    } catch (error: any) {
+      // Fetch all data in parallel using direct table queries
+      const [
+        opportunitiesResult,
+        targetCompaniesResult,
+        aiCoachTodayResult,
+        failedLoginsResult,
+        successfulLoginsResult,
+        lockedAccountsResult,
+        lockedAccountDetailsResult,
+        activeSessionsResult,
+        recentLoginsResult,
+        rateLimitResult,
+        auditLogsResult
+      ] = await Promise.all([
+        supabase.from('opportunities').select('id', { count: 'exact', head: true }).or('is_deleted.eq.false,is_deleted.is.null'),
+        supabase.from('target_companies').select('id', { count: 'exact', head: true }),
+        supabase.from('ai_coach_rate_limits').select('user_id, request_count').eq('reset_date', today),
+        supabase.from('login_attempts').select('id', { count: 'exact', head: true }).eq('success', false).gte('created_at', today),
+        supabase.from('login_attempts').select('id', { count: 'exact', head: true }).eq('success', true).gte('created_at', today),
+        supabase.from('account_lockouts').select('id', { count: 'exact', head: true }).gt('locked_until', now),
+        supabase.from('account_lockouts').select('email, locked_until, failed_attempts, created_at').gt('locked_until', now),
+        supabase.from('user_sessions').select('id', { count: 'exact', head: true }).gt('last_active_at', yesterday),
+        supabase.from('login_attempts').select('email, success, ip_address, created_at').order('created_at', { ascending: false }).limit(20),
+        supabase.from('ai_coach_rate_limits').select('user_id, request_count, reset_date').gte('reset_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        supabase.from('audit_logs').select('id, user_id, action, details, created_at').order('created_at', { ascending: false }).limit(20)
+      ]);
+
+      // Calculate AI coach stats
+      const aiCoachData = aiCoachTodayResult.data || [];
+      const aiCoachUsageToday = aiCoachData.reduce((sum, r) => sum + (r.request_count || 0), 0);
+      const uniqueUserIds = new Set(aiCoachData.map(r => r.user_id));
+
+      const stats: AdminStats = {
+        total_users: 0, // Cannot query auth.users from client
+        total_opportunities: opportunitiesResult.count || 0,
+        total_target_companies: targetCompaniesResult.count || 0,
+        ai_coach_usage_today: aiCoachUsageToday,
+        ai_coach_unique_users_today: uniqueUserIds.size,
+        failed_logins_today: failedLoginsResult.count || 0,
+        successful_logins_today: successfulLoginsResult.count || 0,
+        locked_accounts: lockedAccountsResult.count || 0,
+        locked_account_details: (lockedAccountDetailsResult.data || []) as LockedAccount[],
+        active_sessions: activeSessionsResult.count || 0,
+        recent_logins: (recentLoginsResult.data || []) as RecentLogin[],
+        user_engagement: {
+          users_active_today: 0,
+          users_active_week: 0,
+          new_users_today: 0,
+          new_users_week: 0,
+          opportunities_created_today: 0,
+          opportunities_created_week: 0
+        },
+        rate_limit_details: (rateLimitResult.data || []).map(r => ({
+          user_id: r.user_id,
+          email: '',
+          request_count: r.request_count,
+          reset_date: r.reset_date
+        })),
+        recent_audit_logs: (auditLogsResult.data || []).map(a => ({
+          id: a.id,
+          user_id: a.user_id,
+          email: null,
+          action: a.action,
+          details: a.details as Record<string, unknown>,
+          created_at: a.created_at
+        }))
+      };
+
+      setStats(stats);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error loading stats",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
+
     } finally {
       setIsLoading(false);
     }
@@ -289,12 +360,14 @@ const Admin = () => {
       });
       
       fetchStats();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error unlocking account",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
+
     } finally {
       setUnlockingEmail(null);
     }

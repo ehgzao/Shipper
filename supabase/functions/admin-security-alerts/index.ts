@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -67,7 +67,7 @@ const escapeHtml = (str: string): string => {
     .replace(/'/g, '&#039;');
 };
 
-const getAdminEmails = async (supabase: any): Promise<string[]> => {
+const getAdminEmails = async (supabase: SupabaseClient): Promise<string[]> => {
   const { data, error } = await supabase
     .from('user_roles')
     .select('user_id')
@@ -78,13 +78,14 @@ const getAdminEmails = async (supabase: any): Promise<string[]> => {
     return [];
   }
 
-  const adminIds = data.map((r: any) => r.user_id);
+  const adminIds = (data as { user_id: string }[]).map((r) => r.user_id);
   const { data: profilesData } = await supabase
     .from('profiles')
     .select('email')
     .in('id', adminIds);
   
-  return profilesData?.map((p: any) => p.email).filter(Boolean) || [];
+  const profiles = (profilesData ?? []) as { email: string | null }[];
+  return profiles.map((p) => p.email).filter(Boolean) as string[];
 };
 
 const getAlertEmailContent = (alert_type: string, target_email: string, details?: Record<string, unknown>) => {
@@ -272,7 +273,7 @@ serve(async (req) => {
       JSON.stringify({ success: true, data: emailResponse }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in admin-security-alerts:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),

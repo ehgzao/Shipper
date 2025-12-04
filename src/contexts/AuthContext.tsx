@@ -37,20 +37,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
       
       if (error) {
-        let message = "Erro ao fazer login com Google";
+        let message = "Error signing in with Google";
         
-        // Map error codes to friendly messages in Portuguese
+        // Map error codes to friendly messages
         if (errorCode === 'invalid_client' || errorDescription?.includes('invalid_client')) {
-          message = "Configuração do Google incorreta. Entre em contato com o suporte.";
+          message = "Google configuration error. Please contact support.";
         } else if (errorCode === 'server_error' || errorCode === 'unexpected_failure') {
-          message = "Erro no servidor de autenticação. Tente novamente.";
+          message = "Authentication server error. Please try again.";
         } else if (errorDescription) {
-          message = `Erro: ${decodeURIComponent(errorDescription)}`;
+          message = `Error: ${decodeURIComponent(errorDescription)}`;
         }
         
         toast({
           variant: "destructive",
-          title: "Falha na Autenticação",
+          title: "Authentication Failed",
           description: message,
         });
         
@@ -120,8 +120,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error && retryCount < MAX_RETRIES) {
         toast({
-          title: "Tentando novamente...",
-          description: `Tentativa ${retryCount + 2} de ${MAX_RETRIES + 1}`,
+          title: "Retrying...",
+          description: `Attempt ${retryCount + 2} of ${MAX_RETRIES + 1}`,
         });
         // Wait 1 second before retry
         await new Promise(resolve => setTimeout(resolve, 1000));

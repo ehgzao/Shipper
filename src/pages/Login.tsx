@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,25 @@ import { getLoginContext, isNewDevice, storeDeviceFingerprint } from "@/lib/devi
 import { supabase } from "@/integrations/supabase/client";
 import { TurnstileCaptcha, useVerifyCaptcha } from "@/components/TurnstileCaptcha";
 
-const REMEMBER_EMAIL_KEY = 'shipper_remember_email';
+const REMEMBER_CREDENTIALS_KEY = 'shipper_remember_credentials';
+
+// Simple encoding/decoding for credentials (not encryption, just obfuscation)
+const encodeCredentials = (email: string, password: string): string => {
+  return btoa(JSON.stringify({ email, password }));
+};
+
+const decodeCredentials = (encoded: string): { email: string; password: string } | null => {
+  try {
+    return JSON.parse(atob(encoded));
+  } catch {
+    return null;
+  }
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberEmail, setRememberEmail] = useState(false);
+  const [rememberCredentials, setRememberCredentials] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockMessage, setLockMessage] = useState("");
@@ -29,12 +42,25 @@ const Login = () => {
   const navigate = useNavigate();
   const { verify: verifyCaptcha, isVerifying } = useVerifyCaptcha();
 
-  // Load remembered email on mount
+  // Stable callbacks for Turnstile to prevent re-renders
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setCaptchaToken(token);
+  }, []);
+
+  const handleCaptchaExpire = useCallback(() => {
+    setCaptchaToken(null);
+  }, []);
+
+  // Load remembered credentials on mount
   useEffect(() => {
-    const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberEmail(true);
+    const savedCredentials = localStorage.getItem(REMEMBER_CREDENTIALS_KEY);
+    if (savedCredentials) {
+      const credentials = decodeCredentials(savedCredentials);
+      if (credentials) {
+        setEmail(credentials.email);
+        setPassword(credentials.password);
+        setRememberCredentials(true);
+      }
     }
   }, []);
 
@@ -79,11 +105,11 @@ const Login = () => {
       return;
     }
 
-    // Handle remember email
-    if (rememberEmail) {
-      localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+    // Handle remember credentials
+    if (rememberCredentials) {
+      localStorage.setItem(REMEMBER_CREDENTIALS_KEY, encodeCredentials(email, password));
     } else {
-      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      localStorage.removeItem(REMEMBER_CREDENTIALS_KEY);
     }
 
     // Get device and location context
@@ -262,22 +288,33 @@ const Login = () => {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="remember"
-                checked={rememberEmail}
-                onCheckedChange={(checked) => setRememberEmail(checked as boolean)}
+                checked={rememberCredentials}
+                onCheckedChange={(checked) => setRememberCredentials(checked as boolean)}
               />
               <Label 
                 htmlFor="remember" 
                 className="text-sm font-normal text-muted-foreground cursor-pointer"
               >
-                Remember my email
+                Remember my credentials
               </Label>
             </div>
 
-            <TurnstileCaptcha
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
+            {!captchaToken ? (
+              <TurnstileCaptcha
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+                onError={handleCaptchaExpire}
+              />
+            ) : (
+              <div className="h-[65px] flex items-center justify-center bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-900">
+                <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Verified
+                </span>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked || isVerifying || !captchaToken}>
               {isLoading || isVerifying ? "Signing in..." : "Sign in"}
