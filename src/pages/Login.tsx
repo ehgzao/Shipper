@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema, getValidationError } from "@/lib/validations";
 import { checkAccountLockout, recordLoginAttemptWithGeo, createAuditLog, sendUserSecurityAlert } from "@/lib/auditLog";
 import { getLoginContext, isNewDevice, storeDeviceFingerprint } from "@/lib/deviceFingerprint";
-import { supabase } from "@/integrations/supabase/client";
-import { TurnstileCaptcha, useVerifyCaptcha } from "@/components/TurnstileCaptcha";
 
 const REMEMBER_CREDENTIALS_KEY = 'shipper_remember_credentials';
 
@@ -35,21 +34,10 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockMessage, setLockMessage] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [impossibleTravelWarning, setImpossibleTravelWarning] = useState<string | null>(null);
   const { toast } = useToast();
   const { signIn, signInWithGoogle, googleLoading, user } = useAuth();
   const navigate = useNavigate();
-  const { verify: verifyCaptcha, isVerifying } = useVerifyCaptcha();
-
-  // Stable callbacks for Turnstile to prevent re-renders
-  const handleCaptchaVerify = useCallback((token: string) => {
-    setCaptchaToken(token);
-  }, []);
-
-  const handleCaptchaExpire = useCallback(() => {
-    setCaptchaToken(null);
-  }, []);
 
   // Load remembered credentials on mount
   useEffect(() => {
@@ -81,27 +69,6 @@ const Login = () => {
         description: validationError,
         variant: "destructive",
       });
-      return;
-    }
-
-    // Verify CAPTCHA
-    if (!captchaToken) {
-      toast({
-        title: "CAPTCHA Required",
-        description: "Please complete the CAPTCHA verification.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const captchaValid = await verifyCaptcha(captchaToken);
-    if (!captchaValid) {
-      toast({
-        title: "CAPTCHA Failed",
-        description: "CAPTCHA verification failed. Please try again.",
-        variant: "destructive",
-      });
-      setCaptchaToken(null);
       return;
     }
 
@@ -299,25 +266,8 @@ const Login = () => {
               </Label>
             </div>
 
-            {!captchaToken ? (
-              <TurnstileCaptcha
-                onVerify={handleCaptchaVerify}
-                onExpire={handleCaptchaExpire}
-                onError={handleCaptchaExpire}
-              />
-            ) : (
-              <div className="h-[65px] flex items-center justify-center bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-900">
-                <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Verified
-                </span>
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked || isVerifying || !captchaToken}>
-              {isLoading || isVerifying ? "Signing in..." : "Sign in"}
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isLocked}>
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
 
             {lockMessage && (

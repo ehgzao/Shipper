@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { signupSchema, getValidationError } from "@/lib/validations";
-import { TurnstileCaptcha, useVerifyCaptcha } from "@/components/TurnstileCaptcha";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -16,11 +15,9 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
   const { signUp, signInWithGoogle, googleLoading, user } = useAuth();
   const navigate = useNavigate();
-  const { verify: verifyCaptcha, isVerifying } = useVerifyCaptcha();
 
   useEffect(() => {
     if (user) {
@@ -42,27 +39,6 @@ const Signup = () => {
       return;
     }
 
-    // Verify CAPTCHA
-    if (!captchaToken) {
-      toast({
-        title: "CAPTCHA Required",
-        description: "Please complete the CAPTCHA verification.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const captchaValid = await verifyCaptcha(captchaToken);
-    if (!captchaValid) {
-      toast({
-        title: "CAPTCHA Failed",
-        description: "CAPTCHA verification failed. Please try again.",
-        variant: "destructive",
-      });
-      setCaptchaToken(null);
-      return;
-    }
-    
     setIsLoading(true);
     
     const { error } = await signUp(email, password, name);
@@ -175,14 +151,8 @@ const Signup = () => {
               </div>
             </div>
 
-            <TurnstileCaptcha
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-              onError={() => setCaptchaToken(null)}
-            />
-
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isVerifying || !captchaToken}>
-              {isLoading || isVerifying ? "Creating account..." : "Create account"}
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
 
             <div className="relative my-4">
