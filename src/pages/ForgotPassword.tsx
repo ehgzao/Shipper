@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Mail, Rocket, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, Rocket, CheckCircle, Clock } from "lucide-react";
 import { z } from "zod";
 import { getValidationError } from "@/lib/validations";
 
@@ -12,11 +12,25 @@ const emailSchema = z.object({
   email: z.string().email("Invalid email").max(255, "Email must be at most 255 characters"),
 });
 
+interface RateLimitResult {
+  allowed: boolean;
+  retry_after_seconds: number;
+  message: string;
+}
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(0);
   const { toast } = useToast();
+
+  const formatRetryTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds} seconds`;
+    const minutes = Math.ceil(seconds / 60);
+    return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +46,34 @@ const ForgotPassword = () => {
     }
 
     setIsLoading(true);
+    setRateLimited(false);
 
     try {
+      // Check rate limit first
+      const { data: rateLimitData, error: rateLimitError } = await supabase.rpc(
+        'check_password_reset_rate_limit',
+        { p_email: email.toLowerCase() }
+      );
+
+      if (rateLimitError) {
+        console.error('Rate limit check error:', rateLimitError);
+        // Continue anyway if rate limit check fails - don't block legitimate users
+      } else if (rateLimitData) {
+        const result = rateLimitData as unknown as RateLimitResult;
+        if (!result.allowed) {
+          setRateLimited(true);
+          setRetryAfter(result.retry_after_seconds);
+          toast({
+            title: "Rate Limited",
+            description: result.message,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Proceed with password reset
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -115,6 +155,18 @@ const ForgotPassword = () => {
           <p className="mt-2 text-muted-foreground">
             Enter your email and we'll send you a link to reset your password.
           </p>
+
+          {rateLimited && (
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <Clock className="h-5 w-5" />
+                <span className="font-medium">Too many requests</span>
+              </div>
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-500">
+                Please wait {formatRetryTime(retryAfter)} before trying again.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div>

@@ -275,6 +275,27 @@ export type Database = {
           },
         ]
       }
+      password_reset_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+        }
+        Relationships: []
+      }
       preset_companies: {
         Row: {
           careers_url: string | null
@@ -547,6 +568,15 @@ export type Database = {
       check_ai_coach_rate_limit: {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: boolean
+      }
+      check_password_reset_rate_limit: {
+        Args: {
+          p_email: string
+          p_ip_address?: string
+          p_max_attempts_per_day?: number
+          p_max_attempts_per_hour?: number
+        }
+        Returns: Json
       }
       create_audit_log: {
         Args: { p_action: string; p_details?: Json; p_user_id: string }
