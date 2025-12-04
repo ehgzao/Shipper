@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 // Valid alert types
-const VALID_ALERT_TYPES = ["account_locked", "suspicious_login", "new_device_login", "password_changed", "2fa_enabled", "2fa_disabled"] as const;
+const VALID_ALERT_TYPES = ["account_locked", "suspicious_login", "new_device_login", "password_changed", "2fa_enabled", "2fa_disabled", "impossible_travel"] as const;
 type AlertType = typeof VALID_ALERT_TYPES[number];
 
 interface UserSecurityAlertRequest {
@@ -232,6 +232,36 @@ const getAlertEmailContent = (
             </ul>
             <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
               This is an automated security alert from Shipper.
+            </p>
+          </div>
+        `,
+      };
+    
+    case "impossible_travel":
+      return {
+        subject: "🌍 Unusual Login Location Detected - Shipper",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #dc2626; margin-bottom: 20px;">Impossible Travel Detected</h1>
+            <p>Hi ${displayName},</p>
+            <p>We detected a login to your Shipper account from a location that appears to be geographically impossible given your recent login history.</p>
+            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Time:</strong> ${timestamp}</p>
+              ${safeDetails?.current_location ? `<p style="margin: 8px 0 0 0;"><strong>Current Location:</strong> ${safeDetails.current_location}</p>` : ""}
+              ${safeDetails?.last_location ? `<p style="margin: 8px 0 0 0;"><strong>Previous Location:</strong> ${safeDetails.last_location}</p>` : ""}
+              ${safeDetails?.distance_km ? `<p style="margin: 8px 0 0 0;"><strong>Distance:</strong> ${safeDetails.distance_km} km</p>` : ""}
+              ${safeDetails?.time_hours ? `<p style="margin: 8px 0 0 0;"><strong>Time Elapsed:</strong> ${safeDetails.time_hours} hours</p>` : ""}
+            </div>
+            <p style="color: #dc2626; font-weight: bold;">⚠️ This could indicate your account has been compromised.</p>
+            <p><strong>What you should do:</strong></p>
+            <ul>
+              <li>Change your password immediately</li>
+              <li>Enable two-factor authentication if not already enabled</li>
+              <li>Review your recent account activity</li>
+              <li>If you're using a VPN, this alert may be a false positive</li>
+            </ul>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+              This is an automated security alert from Shipper. If you were traveling or using a VPN, you can ignore this message.
             </p>
           </div>
         `,

@@ -134,6 +134,8 @@ export type Database = {
           email: string
           id: string
           ip_address: string | null
+          latitude: number | null
+          longitude: number | null
           success: boolean
           user_agent: string | null
         }
@@ -145,6 +147,8 @@ export type Database = {
           email: string
           id?: string
           ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
           success?: boolean
           user_agent?: string | null
         }
@@ -156,6 +160,8 @@ export type Database = {
           email?: string
           id?: string
           ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
           success?: boolean
           user_agent?: string | null
         }
@@ -569,6 +575,15 @@ export type Database = {
         Args: { p_daily_limit?: number; p_user_id: string }
         Returns: boolean
       }
+      check_impossible_travel: {
+        Args: {
+          p_current_lat?: number
+          p_current_lng?: number
+          p_email: string
+          p_max_speed_kmh?: number
+        }
+        Returns: Json
+      }
       check_password_reset_rate_limit: {
         Args: {
           p_email: string
@@ -592,6 +607,20 @@ export type Database = {
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       record_login_attempt: {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
+        Returns: Json
+      }
+      record_login_attempt_with_geo: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_device_fingerprint?: string
+          p_email: string
+          p_ip_address?: string
+          p_latitude?: number
+          p_longitude?: number
+          p_success: boolean
+          p_user_agent?: string
+        }
         Returns: Json
       }
       verify_recovery_email: { Args: { p_token: string }; Returns: Json }

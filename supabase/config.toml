@@ -14,3 +14,9 @@ verify_jwt = true
 
 [functions.send-user-security-alert]
 verify_jwt = false
+
+[functions.verify-captcha]
+verify_jwt = false
+
+[functions.get-turnstile-key]
+verify_jwt = false
